@@ -2,6 +2,7 @@ package snitch
 
 import (
 	"sync"
+	"time"
 
 	"github.com/golang/sync/syncmap"
 	"github.com/pborman/uuid"
@@ -66,7 +67,7 @@ func (r *Registry) Gather() (Measures, error) {
 		close(metricsChan)
 	}()
 
-	r.collectors.Range(func(key, value interface{}) bool {
+	r.collectors.Range(func(_, value interface{}) bool {
 		go func(c Collector) {
 			defer wg.Done()
 			c.Collect(metricsChan)
@@ -78,9 +79,10 @@ func (r *Registry) Gather() (Measures, error) {
 	for metric := range metricsChan {
 		d := metric.Description()
 		m := &Measure{
-			Name:   d.Name(),
-			Type:   d.Type(),
-			Labels: d.Labels(),
+			Name:      d.Name(),
+			Type:      d.Type(),
+			Labels:    d.Labels(),
+			CreatedAt: time.Now(),
 		}
 
 		if err := metric.Write(m); err != nil {

@@ -16,8 +16,12 @@ type Timer interface {
 }
 
 type TimerMeasure struct {
-	SampleCount uint64
-	SampleSum   float64
+	SampleCount    uint64
+	SampleSum      float64
+	SampleMin      float64
+	SampleMax      float64
+	SampleVariance float64
+	Quantiles      map[float64]float64
 }
 
 type timerMetric struct {
@@ -28,10 +32,19 @@ type timerMetric struct {
 }
 
 func NewTimer(name string, labels ...string) Timer {
+	return NewTimerWithQuantiles(name, Quantiles, labels...)
+}
+
+func NewTimerWithQuantiles(name string, quantiles []float64, labels ...string) Timer {
+	if len(quantiles) == 0 {
+		quantiles = Quantiles
+	}
+
 	t := &timerMetric{
 		histogramMetric: histogramMetric{
 			description: NewDescription(name, MetricTypeTimer, labels...),
 			histogram:   newSafeHistogram(),
+			quantiles:   quantiles,
 		},
 		begin: time.Now(),
 	}
@@ -44,8 +57,12 @@ func (t *timerMetric) Write(measure *Measure) error {
 	defer t.histogram.RUnlock()
 
 	measure.Timer = &TimerMeasure{
-		SampleCount: uint64(t.histogram.Count()),
-		SampleSum:   t.histogram.Sum(),
+		SampleCount:    uint64(t.histogram.Count()),
+		SampleSum:      t.histogram.Sum(),
+		SampleMin:      t.histogram.Min(),
+		SampleMax:      t.histogram.Max(),
+		SampleVariance: t.histogram.Variance(),
+		Quantiles:      t.histogram.Quantiles(t.quantiles),
 	}
 
 	return nil

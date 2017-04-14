@@ -2,6 +2,7 @@ package snitch
 
 import (
 	"math"
+	"sort"
 	"strings"
 )
 
@@ -10,6 +11,21 @@ type Labels []*Label
 type Label struct {
 	Key   string
 	Value string
+}
+
+func (l Labels) Len() int {
+	return len(l)
+}
+func (l Labels) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+func (l Labels) Less(i, j int) bool {
+	cmp := strings.Compare(l[i].Key, l[j].Key)
+	if cmp == 0 {
+		return strings.Compare(l[i].Value, l[j].Value) < 0
+	}
+
+	return cmp < 0
 }
 
 func (l Labels) WithMap(labels map[string]string) Labels {
@@ -29,6 +45,7 @@ func (l Labels) WithMap(labels map[string]string) Labels {
 		})
 	}
 
+	sort.Sort(ret)
 	return ret
 }
 
@@ -57,6 +74,7 @@ func (l Labels) With(labels ...string) Labels {
 		})
 	}
 
+	sort.Sort(ret)
 	return ret
 }
 
