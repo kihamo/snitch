@@ -1,5 +1,7 @@
 package snitch
 
 type Storage interface {
-	Write(Measures)
+	Id() string
+	Write(Measures) error
+	SetLabels(Labels)
 }

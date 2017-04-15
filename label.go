@@ -49,6 +49,27 @@ func (l Labels) WithMap(labels map[string]string) Labels {
 	return ret
 }
 
+func (l Labels) WithLabels(labels Labels) Labels {
+	ret := make(Labels, 0, len(l)+len(labels))
+
+	for _, value := range l {
+		ret = append(ret, &Label{
+			Key:   value.Key,
+			Value: value.Value,
+		})
+	}
+
+	for _, label := range labels {
+		ret = append(ret, &Label{
+			Key:   label.Key,
+			Value: label.Value,
+		})
+	}
+
+	sort.Sort(ret)
+	return ret
+}
+
 func (l Labels) With(labels ...string) Labels {
 	ret := make(Labels, 0, len(l)+int(math.Floor(float64(len(labels)/2)))+1)
 
@@ -86,6 +107,16 @@ func (l Labels) String() string {
 	}
 
 	return strings.Join(lvs, ",")
+}
+
+func (l Labels) Map() map[string]string {
+	lvs := make(map[string]string, len(l))
+
+	for _, label := range l {
+		lvs[label.Key] = label.Value
+	}
+
+	return lvs
 }
 
 func (l *Label) String() string {
