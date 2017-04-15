@@ -2,6 +2,7 @@ package collector
 
 import (
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/kihamo/snitch"
@@ -24,6 +25,8 @@ func init() {
 }
 
 type debugCollector struct {
+	mutex sync.Mutex
+
 	CGLast       snitch.Gauge
 	CGNum        snitch.Gauge
 	CGPause      snitch.Histogram
@@ -50,6 +53,9 @@ func (c *debugCollector) Describe(ch chan<- *snitch.Description) {
 }
 
 func (c *debugCollector) Collect(ch chan<- snitch.Metric) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	gcLast := debugGCStats.LastGC
 
 	t := time.Now()

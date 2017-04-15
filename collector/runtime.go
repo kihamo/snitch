@@ -3,6 +3,7 @@ package collector
 import (
 	"runtime"
 	"runtime/pprof"
+	"sync"
 	"time"
 
 	"github.com/kihamo/snitch"
@@ -61,6 +62,8 @@ type memStatMetrics []struct {
 }
 
 type runtimeCollector struct {
+	mutex sync.Mutex
+
 	readMemStats snitch.Timer
 	pauseNs      snitch.Histogram
 	numThread    snitch.Gauge
@@ -244,6 +247,9 @@ func (c *runtimeCollector) Describe(ch chan<- *snitch.Description) {
 }
 
 func (c *runtimeCollector) Collect(ch chan<- snitch.Metric) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	t := time.Now()
 	ms := &runtime.MemStats{}
 	runtime.ReadMemStats(ms)
