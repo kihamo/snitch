@@ -178,6 +178,10 @@ func (r *Registry) GatherAndSend() error {
 
 func (r *Registry) AddStorages(ss ...Storage) {
 	for _, s := range ss {
+		if rs, ok := s.(StorageRealtime); ok {
+			rs.SetCallback(r.Gather)
+		}
+
 		r.storages.Store(s.Id(), s)
 	}
 }

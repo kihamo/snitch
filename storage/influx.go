@@ -46,6 +46,7 @@ func (s *Influx) Id() string {
 func (s *Influx) Write(measures snitch.Measures) error {
 	s.mutex.RLock()
 	bp, err := influxdb.NewBatchPoints(s.config)
+	globalLabels := s.labels
 	s.mutex.RUnlock()
 
 	if err != nil {
@@ -82,6 +83,7 @@ func (s *Influx) Write(measures snitch.Measures) error {
 			for q, v := range m.Histogram.Quantiles {
 				fields[fmt.Sprintf("p%.f", q*100)] = v
 			}
+
 		case snitch.MetricTypeTimer:
 			if m.Timer.SampleCount == 0 {
 				continue
@@ -98,11 +100,14 @@ func (s *Influx) Write(measures snitch.Measures) error {
 			for q, v := range m.Timer.Quantiles {
 				fields[fmt.Sprintf("p%.f", q*100)] = v
 			}
+
+		default:
+			continue
 		}
 
-		lvs := s.labels.WithLabels(m.Labels).Map()
+		localLabels := globalLabels.WithLabels(m.Labels).Map()
 
-		p, err := influxdb.NewPoint(m.Name, lvs, fields, m.CreatedAt)
+		p, err := influxdb.NewPoint(m.Name, localLabels, fields, m.CreatedAt)
 		if err != nil {
 			return err
 		}
@@ -117,6 +122,9 @@ func (s *Influx) Write(measures snitch.Measures) error {
 }
 
 func (s *Influx) SetLabels(l snitch.Labels) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	s.labels = l
 }
 
