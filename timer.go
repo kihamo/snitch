@@ -2,6 +2,8 @@ package snitch
 
 import (
 	"time"
+
+	"github.com/kihamo/snitch/internal"
 )
 
 type Timer interface {
@@ -43,7 +45,7 @@ func NewTimerWithQuantiles(name string, quantiles []float64, labels ...string) T
 	t := &timerMetric{
 		histogramMetric: histogramMetric{
 			description: NewDescription(name, MetricTypeTimer, labels...),
-			histogram:   newSafeHistogram(),
+			histogram:   internal.NewSafeHistogram(),
 			quantiles:   quantiles,
 		},
 		begin: time.Now(),

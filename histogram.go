@@ -1,9 +1,7 @@
 package snitch
 
 import (
-	"sync"
-
-	"github.com/bsm/histogram"
+	"github.com/kihamo/snitch/internal"
 )
 
 var (
@@ -28,41 +26,12 @@ type HistogramMeasure struct {
 	Quantiles      map[float64]float64
 }
 
-type safeHistogram struct {
-	sync.RWMutex
-	histogram.Histogram
-}
-
 type histogramMetric struct {
 	selfCollector
 
 	description *Description
-	histogram   *safeHistogram
+	histogram   *internal.SafeHistogram
 	quantiles   []float64
-}
-
-func newSafeHistogram() *safeHistogram {
-	return &safeHistogram{
-		Histogram: *histogram.New(50),
-	}
-}
-
-func (h *safeHistogram) Copy() *safeHistogram {
-	h.RLock()
-	defer h.RUnlock()
-
-	return &safeHistogram{
-		Histogram: *h.Histogram.Copy(nil),
-	}
-}
-
-func (h *safeHistogram) Quantiles(quantiles []float64) map[float64]float64 {
-	ret := make(map[float64]float64, len(quantiles))
-	for _, q := range quantiles {
-		ret[q] = h.Quantile(q)
-	}
-
-	return ret
 }
 
 func NewHistogram(name string, labels ...string) Histogram {
@@ -76,7 +45,7 @@ func NewHistogramWithQuantiles(name string, quantiles []float64, labels ...strin
 
 	h := &histogramMetric{
 		description: NewDescription(name, MetricTypeHistogram, labels...),
-		histogram:   newSafeHistogram(),
+		histogram:   internal.NewSafeHistogram(),
 		quantiles:   quantiles,
 	}
 	h.selfCollector.self = h
