@@ -29,9 +29,9 @@ type gaugeMetric struct {
 	description *Description
 }
 
-func NewGauge(name string, labels ...string) Gauge {
+func NewGauge(name, help string, labels ...string) Gauge {
 	g := &gaugeMetric{
-		description: NewDescription(name, MetricTypeGauge, labels...),
+		description: NewDescription(name, help, MetricTypeGauge, labels...),
 	}
 	g.selfCollector.self = g
 

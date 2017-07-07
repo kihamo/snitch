@@ -23,14 +23,16 @@ var MetricTypeValue = [...]string{
 type Description struct {
 	id     string
 	name   string
+	help   string
 	typ    MetricType
 	labels Labels
 }
 
-func NewDescription(name string, typ MetricType, labels ...string) *Description {
+func NewDescription(name, help string, typ MetricType, labels ...string) *Description {
 	return &Description{
 		id:     uuid.New(),
 		name:   name,
+		help:   help,
 		typ:    typ,
 		labels: Labels{}.With(labels...),
 	}
@@ -42,6 +44,10 @@ func (d *Description) Id() string {
 
 func (d *Description) Name() string {
 	return d.name
+}
+
+func (d *Description) Help() string {
+	return d.help
 }
 
 func (d *Description) Type() MetricType {

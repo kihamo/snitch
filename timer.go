@@ -33,18 +33,18 @@ type timerMetric struct {
 	begin time.Time
 }
 
-func NewTimer(name string, labels ...string) Timer {
-	return NewTimerWithQuantiles(name, Quantiles, labels...)
+func NewTimer(name, help string, labels ...string) Timer {
+	return NewTimerWithQuantiles(name, help, Quantiles, labels...)
 }
 
-func NewTimerWithQuantiles(name string, quantiles []float64, labels ...string) Timer {
+func NewTimerWithQuantiles(name, help string, quantiles []float64, labels ...string) Timer {
 	if len(quantiles) == 0 {
 		quantiles = Quantiles
 	}
 
 	t := &timerMetric{
 		histogramMetric: histogramMetric{
-			description: NewDescription(name, MetricTypeTimer, labels...),
+			description: NewDescription(name, help, MetricTypeTimer, labels...),
 			histogram:   internal.NewSafeHistogram(),
 			quantiles:   quantiles,
 		},

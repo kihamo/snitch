@@ -107,12 +107,9 @@ func (r *Registry) Gather() (Measures, error) {
 	})
 
 	for metric := range metricsChan {
-		d := metric.Description()
 		m := &Measure{
-			Name:      d.Name(),
-			Type:      d.Type(),
-			Labels:    d.Labels(),
-			CreatedAt: time.Now(),
+			Description: metric.Description(),
+			CreatedAt:   time.Now(),
 		}
 
 		if err := metric.Write(m); err != nil {

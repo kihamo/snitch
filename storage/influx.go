@@ -56,7 +56,7 @@ func (s *Influx) Write(measures snitch.Measures) error {
 	var fields map[string]interface{}
 
 	for _, m := range measures {
-		switch m.Type {
+		switch m.Description.Type() {
 		case snitch.MetricTypeCounter:
 			fields = map[string]interface{}{
 				"value": m.Counter.Value,
@@ -105,9 +105,9 @@ func (s *Influx) Write(measures snitch.Measures) error {
 			continue
 		}
 
-		localLabels := globalLabels.WithLabels(m.Labels).Map()
+		localLabels := globalLabels.WithLabels(m.Description.Labels()).Map()
 
-		p, err := influxdb.NewPoint(m.Name, localLabels, fields, m.CreatedAt)
+		p, err := influxdb.NewPoint(m.Description.Name(), localLabels, fields, m.CreatedAt)
 		if err != nil {
 			return err
 		}

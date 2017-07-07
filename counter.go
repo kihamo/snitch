@@ -19,10 +19,10 @@ type counterMetric struct {
 	selfCollector
 }
 
-func NewCounter(name string, labels ...string) Counter {
+func NewCounter(name, help string, labels ...string) Counter {
 	c := &counterMetric{
 		gaugeMetric: gaugeMetric{
-			description: NewDescription(name, MetricTypeCounter, labels...),
+			description: NewDescription(name, help, MetricTypeCounter, labels...),
 		},
 	}
 	c.selfCollector.self = c

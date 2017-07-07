@@ -34,17 +34,17 @@ type histogramMetric struct {
 	quantiles   []float64
 }
 
-func NewHistogram(name string, labels ...string) Histogram {
-	return NewHistogramWithQuantiles(name, Quantiles, labels...)
+func NewHistogram(name, help string, labels ...string) Histogram {
+	return NewHistogramWithQuantiles(name, help, Quantiles, labels...)
 }
 
-func NewHistogramWithQuantiles(name string, quantiles []float64, labels ...string) Histogram {
+func NewHistogramWithQuantiles(name, help string, quantiles []float64, labels ...string) Histogram {
 	if len(quantiles) == 0 {
 		quantiles = Quantiles
 	}
 
 	h := &histogramMetric{
-		description: NewDescription(name, MetricTypeHistogram, labels...),
+		description: NewDescription(name, help, MetricTypeHistogram, labels...),
 		histogram:   internal.NewSafeHistogram(),
 		quantiles:   quantiles,
 	}

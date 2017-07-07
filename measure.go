@@ -8,14 +8,12 @@ import (
 type Measures []*Measure
 
 type Measure struct {
-	Name      string
-	Type      MetricType
-	Labels    Labels
-	CreatedAt time.Time
-	Counter   *CounterMeasure
-	Gauge     *GaugeMeasure
-	Histogram *HistogramMeasure
-	Timer     *TimerMeasure
+	Description *Description
+	CreatedAt   time.Time
+	Counter     *CounterMeasure
+	Gauge       *GaugeMeasure
+	Histogram   *HistogramMeasure
+	Timer       *TimerMeasure
 }
 
 func (m Measures) Len() int {
@@ -25,9 +23,9 @@ func (m Measures) Swap(i, j int) {
 	m[i], m[j] = m[j], m[i]
 }
 func (m Measures) Less(i, j int) bool {
-	cmp := strings.Compare(m[i].Name, m[j].Name)
+	cmp := strings.Compare(m[i].Description.Name(), m[j].Description.Name())
 	if cmp == 0 {
-		return strings.Compare(m[i].Labels.String(), m[j].Labels.String()) < 0
+		return strings.Compare(m[i].Description.Labels().String(), m[j].Description.Labels().String()) < 0
 	}
 
 	return cmp < 0

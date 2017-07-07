@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	MetricDebugGCLast       = "debug.gc.last"
-	MetricDebugGCNum        = "debug.gc.num"
-	MetricDebugGCPause      = "debug.gc.pause"
-	MetricDebugGCPauseTotal = "debug.gc.pause_total"
-	MetricDebugGCReadStats  = "debug.gc.read_stats"
+	MetricDebugGCLast       = "go_debug_gc_last_duration_seconds"
+	MetricDebugGCNum        = "go_debug_gc"
+	MetricDebugGCPause      = "go_debug_gc_pauses_duration_seconds"
+	MetricDebugGCPauseTotal = "go_debug_gc_pauses_total"
+	MetricDebugGCReadStats  = "go_debug_gc_read_stats_duration_seconds"
 )
 
 var (
@@ -36,11 +36,11 @@ type debugCollector struct {
 
 func NewDebugCollector() snitch.Collector {
 	return &debugCollector{
-		CGLast:       snitch.NewGauge(MetricDebugGCLast),
-		CGNum:        snitch.NewGauge(MetricDebugGCNum),
-		CGPause:      snitch.NewHistogram(MetricDebugGCPause),
-		CGPauseTotal: snitch.NewGauge(MetricDebugGCPauseTotal),
-		CGReadStats:  snitch.NewTimer(MetricDebugGCReadStats),
+		CGLast:       snitch.NewGauge(MetricDebugGCLast, "Time of last collection"),
+		CGNum:        snitch.NewGauge(MetricDebugGCNum, "Number of garbage collections"),
+		CGPause:      snitch.NewHistogram(MetricDebugGCPause, ""),
+		CGPauseTotal: snitch.NewGauge(MetricDebugGCPauseTotal, "Total pause for all collections"),
+		CGReadStats:  snitch.NewTimer(MetricDebugGCReadStats, "Lead time of ReadGCStats"),
 	}
 }
 
@@ -67,7 +67,7 @@ func (c *debugCollector) Collect(ch chan<- snitch.Metric) {
 	c.CGPauseTotal.Set(float64(debugGCStats.PauseTotal))
 
 	if gcLast != debugGCStats.LastGC && len(debugGCStats.Pause) > 0 {
-		c.CGPauseTotal.Add(float64(debugGCStats.Pause[0]))
+		c.CGPause.Add(float64(debugGCStats.Pause[0]))
 	}
 
 	ch <- c.CGReadStats

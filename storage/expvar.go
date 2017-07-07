@@ -52,7 +52,7 @@ func (s *Expvar) Write(measures snitch.Measures) error {
 	for _, m := range measures {
 		exp := new(expvar.Map).Init()
 
-		switch m.Type {
+		switch m.Description.Type() {
 		case snitch.MetricTypeCounter:
 			counter := new(expvar.Float)
 			counter.Set(m.Counter.Value)
@@ -143,7 +143,7 @@ func (s *Expvar) Write(measures snitch.Measures) error {
 			continue
 		}
 
-		localLabels := globalLabels.WithLabels(m.Labels)
+		localLabels := globalLabels.WithLabels(m.Description.Labels())
 		if len(localLabels) > 0 {
 			expLabels := new(expvar.Map).Init()
 
@@ -157,7 +157,12 @@ func (s *Expvar) Write(measures snitch.Measures) error {
 			exp.Set("labels", expLabels)
 		}
 
-		s.expvar.Set(m.Name, exp)
+		help := new(expvar.String)
+		help.Set(m.Description.Help())
+
+		exp.Set("help", help)
+
+		s.expvar.Set(m.Description.Name(), exp)
 	}
 
 	return nil
