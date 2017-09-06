@@ -45,11 +45,11 @@ func NewDebugCollector() snitch.Collector {
 }
 
 func (c *debugCollector) Describe(ch chan<- *snitch.Description) {
-	ch <- c.CGLast.Description()
-	ch <- c.CGNum.Description()
-	ch <- c.CGPause.Description()
-	ch <- c.CGPauseTotal.Description()
-	ch <- c.CGReadStats.Description()
+	c.CGLast.Describe(ch)
+	c.CGNum.Describe(ch)
+	c.CGPause.Describe(ch)
+	c.CGPauseTotal.Describe(ch)
+	c.CGReadStats.Describe(ch)
 }
 
 func (c *debugCollector) Collect(ch chan<- snitch.Metric) {
@@ -62,7 +62,7 @@ func (c *debugCollector) Collect(ch chan<- snitch.Metric) {
 	debug.ReadGCStats(&debugGCStats)
 	c.CGReadStats.UpdateSince(t)
 
-	c.CGLast.Set(float64(debugGCStats.LastGC.UnixNano()))
+	c.CGLast.Set(float64(debugGCStats.LastGC.UTC().UnixNano()))
 	c.CGNum.Set(float64(debugGCStats.NumGC))
 	c.CGPauseTotal.Set(float64(debugGCStats.PauseTotal))
 
@@ -70,7 +70,8 @@ func (c *debugCollector) Collect(ch chan<- snitch.Metric) {
 		c.CGPause.Add(float64(debugGCStats.Pause[0]))
 	}
 
-	ch <- c.CGReadStats
+	// send metrics
+	ch <- c.CGLast
 	ch <- c.CGNum
 	ch <- c.CGPause
 	ch <- c.CGPauseTotal

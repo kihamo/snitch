@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/sync/syncmap"
 	"github.com/pborman/uuid"
 )
 
@@ -35,9 +34,9 @@ type Registerer interface {
 
 type Registry struct {
 	mutex        sync.RWMutex
-	collectors   *syncmap.Map
-	descriptions *syncmap.Map
-	storages     *syncmap.Map
+	collectors   *sync.Map
+	descriptions *sync.Map
+	storages     *sync.Map
 	labels       Labels
 
 	sendTicker chan time.Duration
@@ -45,9 +44,9 @@ type Registry struct {
 
 func NewRegistry(d time.Duration) Registerer {
 	r := &Registry{
-		collectors:   &syncmap.Map{},
-		descriptions: &syncmap.Map{},
-		storages:     &syncmap.Map{},
+		collectors:   &sync.Map{},
+		descriptions: &sync.Map{},
+		storages:     &sync.Map{},
 		sendTicker:   make(chan time.Duration),
 	}
 

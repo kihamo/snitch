@@ -42,6 +42,7 @@ const (
 	MetricMemStatsPauseTotalNs  = "go_memstats_last_pause_total_nanoseconds"
 	MetricMemStatsPauseNs       = "go_memstats_last_pause_nanoseconds"
 	MetricMemStatsNumGC         = "go_memstats_gc"
+	MetricMemStatsNumForcedGC   = "go_memstats_forced_gc"
 	MetricMemStatsGCCPUFraction = "go_memstats_gc_cpu_fraction"
 	MetricMemStatsEnableGC      = "go_memstats_gc_enabled"
 	MetricMemStatsDebugGC       = "go_memstats_gc_debug"
@@ -56,11 +57,6 @@ var (
 	runtimeThreadCreateProfile = pprof.Lookup("threadcreate")
 )
 
-type memStatMetrics []struct {
-	metric  snitch.Metric
-	collect func(snitch.Metric, *runtime.MemStats)
-}
-
 type runtimeCollector struct {
 	mutex sync.Mutex
 
@@ -70,7 +66,37 @@ type runtimeCollector struct {
 	numCgoCall   snitch.Gauge
 	numGoroutine snitch.Gauge
 
-	memStat memStatMetrics
+	memStatAlloc      snitch.Gauge
+	memStatTotalAlloc snitch.Counter
+	memStatSys        snitch.Gauge
+	memStatsLookups   snitch.Counter
+	memStatsMallocs   snitch.Counter
+	memStatsFrees     snitch.Counter
+
+	memStatsHeapAlloc    snitch.Gauge
+	memStatsHeapSys      snitch.Gauge
+	memStatsHeapIdle     snitch.Gauge
+	memStatsHeapInuse    snitch.Gauge
+	memStatsHeapReleased snitch.Gauge
+	memStatsHeapObjects  snitch.Gauge
+
+	memStatsStackInuse    snitch.Gauge
+	memStatsStackSys      snitch.Gauge
+	memStatsMSpanInuse    snitch.Gauge
+	memStatsMSpanSys      snitch.Gauge
+	memStatsMCacheInuse   snitch.Gauge
+	memStatsMCacheSys     snitch.Gauge
+	memStatsBuckHashSys   snitch.Gauge
+	memStatsGCSys         snitch.Gauge
+	memStatsOtherSys      snitch.Gauge
+	memStatsNextGC        snitch.Gauge
+	memStatsLastGC        snitch.Gauge
+	memStatsPauseTotalNs  snitch.Gauge
+	memStatsNumGC         snitch.Gauge
+	memStatsNumForcedGC   snitch.Gauge
+	memStatsGCCPUFraction snitch.Gauge
+	memStatsEnableGC      snitch.Gauge
+	memStatsDebugGC       snitch.Gauge
 }
 
 func NewRuntimeCollector() snitch.Collector {
@@ -80,170 +106,81 @@ func NewRuntimeCollector() snitch.Collector {
 		numThread:    snitch.NewGauge(MetricRuntimeNumThread, "Number of OS threads created"),
 		numCgoCall:   snitch.NewGauge(MetricRuntimeNumCgoCall, "Number of CGO calls"),
 		numGoroutine: snitch.NewGauge(MetricRuntimeNumGoroutine, "Number of goroutines that currently exist"),
-		memStat: memStatMetrics{
-			{
-				metric: snitch.NewGauge(MetricMemStatsAlloc, "Number of bytes allocated and still in use"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.Alloc))
-				},
-			}, {
-				metric: snitch.NewCounter(MetricMemStatsTotalAlloc, "Total number of bytes allocated, even if freed"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Counter).Add(float64(s.TotalAlloc))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsSys, "Number of bytes obtained from system"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.Sys))
-				},
-			}, {
-				metric: snitch.NewCounter(MetricMemStatsLookups, "Total number of pointer lookups"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Counter).Add(float64(s.Lookups))
-				},
-			}, {
-				metric: snitch.NewCounter(MetricMemStatsMallocs, "Total number of mallocs"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Counter).Add(float64(s.Mallocs))
-				},
-			}, {
-				metric: snitch.NewCounter(MetricMemStatsFrees, "Total number of frees"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Counter).Add(float64(s.Frees))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsHeapAlloc, "Number of heap bytes allocated and still in use"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.HeapAlloc))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsHeapSys, "Number of heap bytes obtained from system"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.HeapSys))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsHeapIdle, "Number of heap bytes waiting to be used"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.HeapIdle))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsHeapInuse, "Number of heap bytes that are in use"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.HeapInuse))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsHeapReleased, "Number of heap bytes released to OS"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.HeapReleased))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsHeapObjects, "Number of allocated objects"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.HeapObjects))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsStackInuse, "Number of bytes in use by the stack allocator"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.StackInuse))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsStackSys, "Number of bytes obtained from system for stack allocator"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.StackSys))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsMSpanInuse, "Number of bytes in use by mspan structures"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.MSpanInuse))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsMSpanSys, "Number of bytes used for mspan structures obtained from system"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.MSpanSys))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsMCacheInuse, "Number of bytes in use by mcache structures"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.MCacheInuse))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsMCacheSys, "Number of bytes used for mcache structures obtained from system"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.MCacheSys))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsBuckHashSys, "Number of bytes used by the profiling bucket hash table"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.BuckHashSys))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsGCSys, "Number of bytes used for garbage collection system metadata"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.GCSys))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsOtherSys, "Number of bytes used for other system allocations"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.OtherSys))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsNextGC, "Number of heap bytes when next garbage collection will take place"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.NextGC))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsLastGC, "Number of seconds since 1970 of last garbage collection"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.LastGC))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsPauseTotalNs, "Cumulative nanoseconds in GC stop-the-world pauses since the program started"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.PauseTotalNs))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsNumGC, "Number of completed GC cycles"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(float64(s.NumGC))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsGCCPUFraction, "The fraction of this program's available CPU time used by the GC since the program started"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					m.(snitch.Gauge).Set(r.GCCPUFraction(s))
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsEnableGC, "Indicates that GC is enabled"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					if s.EnableGC {
-						m.(snitch.Gauge).Set(1)
-					} else {
-						m.(snitch.Gauge).Set(0)
-					}
-				},
-			}, {
-				metric: snitch.NewGauge(MetricMemStatsDebugGC, "Debug GC is currently unused"),
-				collect: func(m snitch.Metric, s *runtime.MemStats) {
-					if s.DebugGC {
-						m.(snitch.Gauge).Set(1)
-					} else {
-						m.(snitch.Gauge).Set(0)
-					}
-				},
-			},
-		},
+
+		memStatAlloc:      snitch.NewGauge(MetricMemStatsAlloc, "Number of bytes allocated and still in use"),
+		memStatTotalAlloc: snitch.NewCounter(MetricMemStatsTotalAlloc, "Total number of bytes allocated, even if freed"),
+		memStatSys:        snitch.NewGauge(MetricMemStatsSys, "Number of bytes obtained from system"),
+		memStatsLookups:   snitch.NewCounter(MetricMemStatsLookups, "Total number of pointer lookups"),
+		memStatsMallocs:   snitch.NewCounter(MetricMemStatsMallocs, "Total number of mallocs"),
+		memStatsFrees:     snitch.NewCounter(MetricMemStatsFrees, "Total number of frees"),
+
+		memStatsHeapAlloc:    snitch.NewGauge(MetricMemStatsHeapAlloc, "Number of heap bytes allocated and still in use"),
+		memStatsHeapSys:      snitch.NewGauge(MetricMemStatsHeapSys, "Number of heap bytes obtained from system"),
+		memStatsHeapIdle:     snitch.NewGauge(MetricMemStatsHeapIdle, "Number of heap bytes waiting to be used"),
+		memStatsHeapInuse:    snitch.NewGauge(MetricMemStatsHeapInuse, "Number of heap bytes that are in use"),
+		memStatsHeapReleased: snitch.NewGauge(MetricMemStatsHeapReleased, "Number of heap bytes released to OS"),
+		memStatsHeapObjects:  snitch.NewGauge(MetricMemStatsHeapObjects, "Number of allocated objects"),
+
+		memStatsStackInuse:  snitch.NewGauge(MetricMemStatsStackInuse, "Number of bytes in use by the stack allocator"),
+		memStatsStackSys:    snitch.NewGauge(MetricMemStatsStackSys, "Number of bytes obtained from system for stack allocator"),
+		memStatsMSpanInuse:  snitch.NewGauge(MetricMemStatsMSpanInuse, "Number of bytes in use by mspan structures"),
+		memStatsMSpanSys:    snitch.NewGauge(MetricMemStatsMSpanSys, "Number of bytes used for mspan structures obtained from system"),
+		memStatsMCacheInuse: snitch.NewGauge(MetricMemStatsMCacheInuse, "Number of bytes in use by mcache structures"),
+		memStatsMCacheSys:   snitch.NewGauge(MetricMemStatsMCacheSys, "Number of bytes used for mcache structures obtained from system"),
+		memStatsBuckHashSys: snitch.NewGauge(MetricMemStatsBuckHashSys, "Number of bytes used by the profiling bucket hash table"),
+		memStatsGCSys:       snitch.NewGauge(MetricMemStatsGCSys, "Number of bytes used for garbage collection system metadata"),
+		memStatsOtherSys:    snitch.NewGauge(MetricMemStatsOtherSys, "Number of bytes used for other system allocations"),
+
+		memStatsNextGC:        snitch.NewGauge(MetricMemStatsNextGC, "Number of heap bytes when next garbage collection will take place"),
+		memStatsLastGC:        snitch.NewGauge(MetricMemStatsLastGC, "Number of seconds since 1970 of last garbage collection"),
+		memStatsPauseTotalNs:  snitch.NewGauge(MetricMemStatsPauseTotalNs, "Cumulative nanoseconds in GC stop-the-world pauses since the program started"),
+		memStatsNumGC:         snitch.NewGauge(MetricMemStatsNumGC, "Number of completed GC cycles"),
+		memStatsNumForcedGC:   snitch.NewGauge(MetricMemStatsNumForcedGC, "Number of GC cycles that were forced by the application calling the GC function"),
+		memStatsGCCPUFraction: snitch.NewGauge(MetricMemStatsGCCPUFraction, "The fraction of this program's available CPU time used by the GC since the program started"),
+		memStatsEnableGC:      snitch.NewGauge(MetricMemStatsEnableGC, "Indicates that GC is enabled"),
+		memStatsDebugGC:       snitch.NewGauge(MetricMemStatsDebugGC, "Debug GC is currently unused"),
 	}
 }
 
 func (c *runtimeCollector) Describe(ch chan<- *snitch.Description) {
-	for _, m := range c.memStat {
-		ch <- m.metric.Description()
-	}
+	c.memStatAlloc.Describe(ch)
+	c.memStatTotalAlloc.Describe(ch)
+	c.memStatSys.Describe(ch)
+	c.memStatsLookups.Describe(ch)
+	c.memStatsMallocs.Describe(ch)
+	c.memStatsFrees.Describe(ch)
 
-	ch <- c.readMemStats.Description()
-	ch <- c.pauseNs.Description()
-	ch <- c.numThread.Description()
-	ch <- c.numCgoCall.Description()
-	ch <- c.numGoroutine.Description()
+	c.memStatsHeapAlloc.Describe(ch)
+	c.memStatsHeapSys.Describe(ch)
+	c.memStatsHeapIdle.Describe(ch)
+	c.memStatsHeapInuse.Describe(ch)
+	c.memStatsHeapReleased.Describe(ch)
+	c.memStatsHeapObjects.Describe(ch)
+
+	c.memStatsStackInuse.Describe(ch)
+	c.memStatsStackSys.Describe(ch)
+	c.memStatsMSpanInuse.Describe(ch)
+	c.memStatsMSpanSys.Describe(ch)
+	c.memStatsMCacheInuse.Describe(ch)
+	c.memStatsMCacheSys.Describe(ch)
+	c.memStatsBuckHashSys.Describe(ch)
+	c.memStatsGCSys.Describe(ch)
+	c.memStatsOtherSys.Describe(ch)
+
+	c.memStatsNextGC.Describe(ch)
+	c.memStatsLastGC.Describe(ch)
+	c.memStatsPauseTotalNs.Describe(ch)
+	c.memStatsNumGC.Describe(ch)
+	c.memStatsNumForcedGC.Describe(ch)
+	c.memStatsGCCPUFraction.Describe(ch)
+	c.memStatsEnableGC.Describe(ch)
+	c.memStatsDebugGC.Describe(ch)
+
+	c.readMemStats.Describe(ch)
+	c.pauseNs.Describe(ch)
+	c.numThread.Describe(ch)
+	c.numCgoCall.Describe(ch)
+	c.numGoroutine.Describe(ch)
 }
 
 func (c *runtimeCollector) Collect(ch chan<- snitch.Metric) {
@@ -255,11 +192,49 @@ func (c *runtimeCollector) Collect(ch chan<- snitch.Metric) {
 	runtime.ReadMemStats(ms)
 
 	c.readMemStats.UpdateSince(t)
-	ch <- c.readMemStats
 
-	for _, m := range c.memStat {
-		m.collect(m.metric, ms)
-		ch <- m.metric
+	// memstat
+	c.memStatAlloc.Set(float64(ms.Alloc))
+	c.memStatTotalAlloc.Add(float64(ms.TotalAlloc))
+	c.memStatSys.Set(float64(ms.Sys))
+	c.memStatsLookups.Add(float64(ms.Lookups))
+	c.memStatsMallocs.Add(float64(ms.Mallocs))
+	c.memStatsFrees.Add(float64(ms.Frees))
+
+	c.memStatsHeapAlloc.Set(float64(ms.HeapAlloc))
+	c.memStatsHeapSys.Set(float64(ms.HeapSys))
+	c.memStatsHeapIdle.Set(float64(ms.HeapIdle))
+	c.memStatsHeapInuse.Set(float64(ms.HeapInuse))
+	c.memStatsHeapReleased.Set(float64(ms.HeapReleased))
+	c.memStatsHeapObjects.Set(float64(ms.HeapObjects))
+
+	c.memStatsStackInuse.Set(float64(ms.StackInuse))
+	c.memStatsStackSys.Set(float64(ms.StackSys))
+	c.memStatsMSpanInuse.Set(float64(ms.MSpanInuse))
+	c.memStatsMSpanSys.Set(float64(ms.MSpanSys))
+	c.memStatsMCacheInuse.Set(float64(ms.MCacheInuse))
+	c.memStatsMCacheSys.Set(float64(ms.MCacheSys))
+	c.memStatsBuckHashSys.Set(float64(ms.BuckHashSys))
+	c.memStatsGCSys.Set(float64(ms.GCSys))
+	c.memStatsOtherSys.Set(float64(ms.OtherSys))
+
+	c.memStatsNextGC.Set(float64(ms.NextGC))
+	c.memStatsLastGC.Set(float64(ms.LastGC))
+	c.memStatsPauseTotalNs.Set(float64(ms.PauseTotalNs))
+	c.memStatsNumGC.Set(float64(ms.NumGC))
+	c.memStatsNumForcedGC.Set(float64(ms.NumForcedGC))
+	c.memStatsGCCPUFraction.Set(r.GCCPUFraction(ms))
+
+	if ms.EnableGC {
+		c.memStatsEnableGC.Set(1)
+	} else {
+		c.memStatsEnableGC.Set(0)
+	}
+
+	if ms.DebugGC {
+		c.memStatsDebugGC.Set(1)
+	} else {
+		c.memStatsDebugGC.Set(0)
 	}
 
 	i := runtimeNumGC % uint32(len(ms.PauseNs))
@@ -279,16 +254,49 @@ func (c *runtimeCollector) Collect(ch chan<- snitch.Metric) {
 			c.pauseNs.Add(float64(ms.PauseNs[i]))
 		}
 	}
-	ch <- c.pauseNs
 
 	c.numThread.Set(float64(runtimeThreadCreateProfile.Count()))
-	ch <- c.numThread
-
 	c.numCgoCall.Set(float64(r.GetNumCgoCall()))
-	ch <- c.numCgoCall
-
 	c.numGoroutine.Set(float64(runtime.NumGoroutine()))
-	ch <- c.numGoroutine
 
 	runtimeNumGC = ms.NumGC
+
+	// send metrics
+	ch <- c.readMemStats
+	ch <- c.pauseNs
+	ch <- c.numThread
+	ch <- c.numCgoCall
+	ch <- c.numGoroutine
+
+	ch <- c.memStatAlloc
+	ch <- c.memStatTotalAlloc
+	ch <- c.memStatSys
+	ch <- c.memStatsLookups
+	ch <- c.memStatsMallocs
+	ch <- c.memStatsFrees
+
+	ch <- c.memStatsHeapAlloc
+	ch <- c.memStatsHeapSys
+	ch <- c.memStatsHeapIdle
+	ch <- c.memStatsHeapInuse
+	ch <- c.memStatsHeapReleased
+	ch <- c.memStatsHeapObjects
+
+	ch <- c.memStatsStackInuse
+	ch <- c.memStatsStackSys
+	ch <- c.memStatsMSpanInuse
+	ch <- c.memStatsMSpanSys
+	ch <- c.memStatsMCacheInuse
+	ch <- c.memStatsMCacheSys
+	ch <- c.memStatsBuckHashSys
+	ch <- c.memStatsGCSys
+	ch <- c.memStatsOtherSys
+	ch <- c.memStatsNextGC
+	ch <- c.memStatsLastGC
+	ch <- c.memStatsPauseTotalNs
+	ch <- c.memStatsNumGC
+	ch <- c.memStatsNumForcedGC
+	ch <- c.memStatsGCCPUFraction
+	ch <- c.memStatsEnableGC
+	ch <- c.memStatsDebugGC
 }

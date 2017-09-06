@@ -10,10 +10,11 @@ type Measures []*Measure
 type Measure struct {
 	Description *Description
 	CreatedAt   time.Time
-	Counter     *CounterMeasure
-	Gauge       *GaugeMeasure
-	Histogram   *HistogramMeasure
-	Timer       *TimerMeasure
+
+	Counter   *CounterMeasure
+	Gauge     *GaugeMeasure
+	Histogram *HistogramMeasure
+	Timer     *TimerMeasure
 }
 
 func (m Measures) Len() int {
