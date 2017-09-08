@@ -31,10 +31,12 @@ func (v *vector) Collect(ch chan<- Metric) {
 	v.mutex.RLock()
 	defer v.mutex.RUnlock()
 
-	ch <- v.metric
-
-	for _, m := range v.children {
-		ch <- m
+	if len(v.children) == 0 {
+		ch <- v.metric
+	} else {
+		for _, m := range v.children {
+			ch <- m
+		}
 	}
 }
 
