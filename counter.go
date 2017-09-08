@@ -8,15 +8,15 @@ type Counter interface {
 	Metric
 	Collector
 
-	With(...string) Counter
 	Add(float64)
 	Inc()
 	Count() float64
+
+	With(...string) Counter
 }
 
 type counterMetric struct {
 	untypedMetric
-	selfCollector
 }
 
 func NewCounter(name, help string, labels ...string) Counter {
@@ -25,7 +25,9 @@ func NewCounter(name, help string, labels ...string) Counter {
 			description: NewDescription(name, help, MetricTypeCounter, labels...),
 		},
 	}
-	c.selfCollector.self = c
+	c.init(c, func(l ...string) Metric {
+		return NewCounter(name, help, append(labels, l...)...)
+	})
 
 	return c
 }
@@ -38,15 +40,10 @@ func (c *counterMetric) Add(value float64) {
 	c.untypedMetric.Add(value)
 }
 
-func (c *counterMetric) With(labels ...string) Counter {
-	return &counterMetric{
-		untypedMetric: untypedMetric{
-			bits:        c.bits,
-			description: c.description,
-		},
-	}
-}
-
 func (c *counterMetric) Count() float64 {
 	return c.Value()
+}
+
+func (c *counterMetric) With(labels ...string) Counter {
+	return c.vector.With(labels...).(Counter)
 }

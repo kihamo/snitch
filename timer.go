@@ -10,15 +10,15 @@ type Timer interface {
 	Metric
 	Collector
 
-	With(...string) Timer
 	Update(time.Duration)
 	UpdateSince(time.Time)
 	Time()
 	Quantile(float64) float64
+
+	With(...string) Timer
 }
 
 type timerMetric struct {
-	selfCollector
 	histogramMetric
 
 	begin time.Time
@@ -41,18 +41,11 @@ func NewTimerWithQuantiles(name, help string, quantiles []float64, labels ...str
 		},
 		begin: time.Now(),
 	}
-	t.selfCollector.self = t
-	return t
-}
+	t.init(t, func(l ...string) Metric {
+		return NewTimerWithQuantiles(name, help, quantiles, append(labels, l...)...)
+	})
 
-func (t *timerMetric) With(labels ...string) Timer {
-	return &timerMetric{
-		histogramMetric: histogramMetric{
-			description: t.description,
-			histogram:   t.histogram.Copy(),
-		},
-		begin: t.begin,
-	}
+	return t
 }
 
 func (t *timerMetric) Update(d time.Duration) {
@@ -70,4 +63,8 @@ func (t *timerMetric) UpdateSince(ts time.Time) {
 
 func (t *timerMetric) Time() {
 	t.UpdateSince(t.begin)
+}
+
+func (t *timerMetric) With(labels ...string) Timer {
+	return t.vector.With(labels...).(Timer)
 }

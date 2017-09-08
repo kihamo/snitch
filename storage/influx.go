@@ -75,7 +75,7 @@ func (s *Influx) Write(measures snitch.Measures) error {
 				"sample_variance": *(m.Value.SampleVariance),
 			}
 
-			for q, v := range *(m.Value.Quantiles) {
+			for q, v := range m.Value.Quantiles {
 				fields[fmt.Sprintf("p%.f", q*100)] = v
 			}
 

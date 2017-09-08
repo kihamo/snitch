@@ -88,10 +88,10 @@ func (s *Expvar) Write(measures snitch.Measures) error {
 				exp.Set("sample_variance", variance)
 			}
 
-			for q, v := range *(m.Value.Quantiles) {
-				if !math.IsNaN(v) {
+			for q, v := range m.Value.Quantiles {
+				if !math.IsNaN(*v) {
 					quantile := new(expvar.Float)
-					quantile.Set(v)
+					quantile.Set(*v)
 					exp.Set(fmt.Sprintf("p%.f", q*100), quantile)
 				}
 			}

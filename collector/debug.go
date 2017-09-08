@@ -71,9 +71,9 @@ func (c *debugCollector) Collect(ch chan<- snitch.Metric) {
 	}
 
 	// send metrics
-	ch <- c.CGLast
-	ch <- c.CGNum
-	ch <- c.CGPause
-	ch <- c.CGPauseTotal
-	ch <- c.CGReadStats
+	c.CGLast.Collect(ch)
+	c.CGNum.Collect(ch)
+	c.CGPause.Collect(ch)
+	c.CGPauseTotal.Collect(ch)
+	c.CGReadStats.Collect(ch)
 }

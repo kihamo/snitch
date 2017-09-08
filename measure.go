@@ -20,7 +20,7 @@ type MeasureValue struct {
 	SampleMin      *float64
 	SampleMax      *float64
 	SampleVariance *float64
-	Quantiles      *map[float64]float64
+	Quantiles      map[float64]*float64
 }
 
 func (m Measures) Len() int {

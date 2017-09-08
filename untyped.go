@@ -9,29 +9,32 @@ type Untyped interface {
 	Metric
 	Collector
 
-	With(...string) Untyped
 	Set(float64)
 	Add(float64)
 	Sub(float64)
 	Inc()
 	Dec()
 	Value() float64
+
+	With(...string) Untyped
 }
 
 type untypedMetric struct {
-	selfCollector
+	vector
 
 	bits        uint64
 	description *Description
 }
 
 func NewUntyped(name, help string, labels ...string) Untyped {
-	g := &untypedMetric{
+	u := &untypedMetric{
 		description: NewDescription(name, help, MetricTypeUntyped, labels...),
 	}
-	g.selfCollector.self = g
+	u.init(u, func(l ...string) Metric {
+		return NewUntyped(name, help, append(labels, l...)...)
+	})
 
-	return g
+	return u
 }
 
 func (u *untypedMetric) Description() *Description {
@@ -40,15 +43,8 @@ func (u *untypedMetric) Description() *Description {
 
 func (u *untypedMetric) Measure() (*MeasureValue, error) {
 	return &MeasureValue{
-		Value: &(&struct{ v float64 }{u.Value()}).v,
+		Value: Float64(u.Value()),
 	}, nil
-}
-
-func (u *untypedMetric) With(labels ...string) Untyped {
-	return &untypedMetric{
-		bits:        u.bits,
-		description: u.description,
-	}
 }
 
 func (u *untypedMetric) Set(value float64) {
@@ -79,4 +75,8 @@ func (u *untypedMetric) Dec() {
 
 func (u *untypedMetric) Value() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&u.bits))
+}
+
+func (u *untypedMetric) With(labels ...string) Untyped {
+	return u.vector.With(labels...).(Untyped)
 }

@@ -262,41 +262,41 @@ func (c *runtimeCollector) Collect(ch chan<- snitch.Metric) {
 	runtimeNumGC = ms.NumGC
 
 	// send metrics
-	ch <- c.readMemStats
-	ch <- c.pauseNs
-	ch <- c.numThread
-	ch <- c.numCgoCall
-	ch <- c.numGoroutine
+	c.readMemStats.Collect(ch)
+	c.pauseNs.Collect(ch)
+	c.numThread.Collect(ch)
+	c.numCgoCall.Collect(ch)
+	c.numGoroutine.Collect(ch)
 
-	ch <- c.memStatAlloc
-	ch <- c.memStatTotalAlloc
-	ch <- c.memStatSys
-	ch <- c.memStatsLookups
-	ch <- c.memStatsMallocs
-	ch <- c.memStatsFrees
+	c.memStatAlloc.Collect(ch)
+	c.memStatTotalAlloc.Collect(ch)
+	c.memStatSys.Collect(ch)
+	c.memStatsLookups.Collect(ch)
+	c.memStatsMallocs.Collect(ch)
+	c.memStatsFrees.Collect(ch)
 
-	ch <- c.memStatsHeapAlloc
-	ch <- c.memStatsHeapSys
-	ch <- c.memStatsHeapIdle
-	ch <- c.memStatsHeapInuse
-	ch <- c.memStatsHeapReleased
-	ch <- c.memStatsHeapObjects
+	c.memStatsHeapAlloc.Collect(ch)
+	c.memStatsHeapSys.Collect(ch)
+	c.memStatsHeapIdle.Collect(ch)
+	c.memStatsHeapInuse.Collect(ch)
+	c.memStatsHeapReleased.Collect(ch)
+	c.memStatsHeapObjects.Collect(ch)
 
-	ch <- c.memStatsStackInuse
-	ch <- c.memStatsStackSys
-	ch <- c.memStatsMSpanInuse
-	ch <- c.memStatsMSpanSys
-	ch <- c.memStatsMCacheInuse
-	ch <- c.memStatsMCacheSys
-	ch <- c.memStatsBuckHashSys
-	ch <- c.memStatsGCSys
-	ch <- c.memStatsOtherSys
-	ch <- c.memStatsNextGC
-	ch <- c.memStatsLastGC
-	ch <- c.memStatsPauseTotalNs
-	ch <- c.memStatsNumGC
-	ch <- c.memStatsNumForcedGC
-	ch <- c.memStatsGCCPUFraction
-	ch <- c.memStatsEnableGC
-	ch <- c.memStatsDebugGC
+	c.memStatsStackInuse.Collect(ch)
+	c.memStatsStackSys.Collect(ch)
+	c.memStatsMSpanInuse.Collect(ch)
+	c.memStatsMSpanSys.Collect(ch)
+	c.memStatsMCacheInuse.Collect(ch)
+	c.memStatsMCacheSys.Collect(ch)
+	c.memStatsBuckHashSys.Collect(ch)
+	c.memStatsGCSys.Collect(ch)
+	c.memStatsOtherSys.Collect(ch)
+	c.memStatsNextGC.Collect(ch)
+	c.memStatsLastGC.Collect(ch)
+	c.memStatsPauseTotalNs.Collect(ch)
+	c.memStatsNumGC.Collect(ch)
+	c.memStatsNumForcedGC.Collect(ch)
+	c.memStatsGCCPUFraction.Collect(ch)
+	c.memStatsEnableGC.Collect(ch)
+	c.memStatsDebugGC.Collect(ch)
 }
