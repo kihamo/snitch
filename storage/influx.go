@@ -76,7 +76,7 @@ func (s *Influx) Write(measures snitch.Measures) error {
 			}
 
 			for q, v := range m.Value.Quantiles {
-				fields[fmt.Sprintf("p%.f", q*100)] = v
+				fields[fmt.Sprintf("p%.f", q*100)] = *v
 			}
 
 		default:
