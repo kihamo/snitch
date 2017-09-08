@@ -14,18 +14,14 @@ type Counter interface {
 	Count() float64
 }
 
-type CounterMeasure struct {
-	Value float64
-}
-
 type counterMetric struct {
-	gaugeMetric
+	untypedMetric
 	selfCollector
 }
 
 func NewCounter(name, help string, labels ...string) Counter {
 	c := &counterMetric{
-		gaugeMetric: gaugeMetric{
+		untypedMetric: untypedMetric{
 			description: NewDescription(name, help, MetricTypeCounter, labels...),
 		},
 	}
@@ -39,20 +35,12 @@ func (c *counterMetric) Add(value float64) {
 		panic(errors.New("value can't be less than zero"))
 	}
 
-	c.gaugeMetric.Add(value)
-}
-
-func (c *counterMetric) Write(measure *Measure) error {
-	measure.Counter = &CounterMeasure{
-		Value: c.Value(),
-	}
-
-	return nil
+	c.untypedMetric.Add(value)
 }
 
 func (c *counterMetric) With(labels ...string) Counter {
 	return &counterMetric{
-		gaugeMetric: gaugeMetric{
+		untypedMetric: untypedMetric{
 			bits:        c.bits,
 			description: c.description,
 		},

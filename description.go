@@ -7,13 +7,15 @@ import (
 type MetricType int
 
 const (
-	MetricTypeCounter MetricType = 1 + iota
+	MetricTypeUntyped MetricType = 1 + iota
+	MetricTypeCounter
 	MetricTypeGauge
 	MetricTypeHistogram
 	MetricTypeTimer
 )
 
 var MetricTypeValue = [...]string{
+	"untyped",
 	"counter",
 	"gauge",
 	"histogram",

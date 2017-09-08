@@ -10,11 +10,17 @@ type Measures []*Measure
 type Measure struct {
 	Description *Description
 	CreatedAt   time.Time
+	Value       *MeasureValue
+}
 
-	Counter   *CounterMeasure
-	Gauge     *GaugeMeasure
-	Histogram *HistogramMeasure
-	Timer     *TimerMeasure
+type MeasureValue struct {
+	Value          *float64
+	SampleCount    *uint64
+	SampleSum      *float64
+	SampleMin      *float64
+	SampleMax      *float64
+	SampleVariance *float64
+	Quantiles      *map[float64]float64
 }
 
 func (m Measures) Len() int {

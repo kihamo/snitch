@@ -53,85 +53,42 @@ func (s *Expvar) Write(measures snitch.Measures) error {
 		exp := new(expvar.Map).Init()
 
 		switch m.Description.Type() {
-		case snitch.MetricTypeCounter:
+		case snitch.MetricTypeUntyped, snitch.MetricTypeCounter, snitch.MetricTypeGauge:
 			counter := new(expvar.Float)
-			counter.Set(m.Counter.Value)
+			counter.Set(*(m.Value.Value))
 
 			exp.Set("value", counter)
 
-		case snitch.MetricTypeGauge:
-			gauge := new(expvar.Float)
-			gauge.Set(m.Gauge.Value)
-
-			exp.Set("value", gauge)
-
-		case snitch.MetricTypeHistogram:
+		case snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
 			count := new(expvar.Int)
-			count.Set(int64(m.Histogram.SampleCount))
+			count.Set(int64(*(m.Value.SampleCount)))
 			exp.Set("sample_count", count)
 
-			if !math.IsNaN(m.Histogram.SampleSum) {
+			if !math.IsNaN(*(m.Value.SampleSum)) {
 				sum := new(expvar.Float)
-				sum.Set(m.Histogram.SampleSum)
+				sum.Set(*(m.Value.SampleSum))
 				exp.Set("sample_sum", sum)
 			}
 
-			if !math.IsNaN(m.Histogram.SampleMin) {
+			if !math.IsNaN(*(m.Value.SampleMin)) {
 				min := new(expvar.Float)
-				min.Set(m.Histogram.SampleMin)
+				min.Set(*(m.Value.SampleMin))
 				exp.Set("sample_min", min)
 			}
 
-			if !math.IsNaN(m.Histogram.SampleMax) {
+			if !math.IsNaN(*(m.Value.SampleMax)) {
 				max := new(expvar.Float)
-				max.Set(m.Histogram.SampleMax)
+				max.Set(*(m.Value.SampleMax))
 				exp.Set("sample_max", max)
 			}
 
-			if !math.IsNaN(m.Histogram.SampleVariance) {
+			if !math.IsNaN(*(m.Value.SampleVariance)) {
 				variance := new(expvar.Float)
-				variance.Set(m.Histogram.SampleVariance)
+				variance.Set(*(m.Value.SampleVariance))
 				exp.Set("sample_variance", variance)
 			}
 
-			for q, v := range m.Histogram.Quantiles {
-				if !math.IsNaN(v) {
-					quantile := new(expvar.Float)
-					quantile.Set(v)
-					exp.Set(fmt.Sprintf("p%.f", q*100), quantile)
-				}
-			}
-
-		case snitch.MetricTypeTimer:
-			count := new(expvar.Int)
-			count.Set(int64(m.Timer.SampleCount))
-			exp.Set("sample_count", count)
-
-			if !math.IsNaN(m.Timer.SampleSum) {
-				sum := new(expvar.Float)
-				sum.Set(m.Timer.SampleSum)
-				exp.Set("sample_sum", sum)
-			}
-
-			if !math.IsNaN(m.Timer.SampleMin) {
-				min := new(expvar.Float)
-				min.Set(m.Timer.SampleMin)
-				exp.Set("sample_min", min)
-			}
-
-			if !math.IsNaN(m.Timer.SampleMax) {
-				max := new(expvar.Float)
-				max.Set(m.Timer.SampleMax)
-				exp.Set("sample_max", max)
-			}
-
-			if !math.IsNaN(m.Timer.SampleVariance) {
-				variance := new(expvar.Float)
-				variance.Set(m.Timer.SampleVariance)
-				exp.Set("sample_variance", variance)
-			}
-
-			for q, v := range m.Timer.Quantiles {
+			for q, v := range *(m.Value.Quantiles) {
 				if !math.IsNaN(v) {
 					quantile := new(expvar.Float)
 					quantile.Set(v)

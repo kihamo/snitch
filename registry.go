@@ -106,16 +106,16 @@ func (r *Registry) Gather() (Measures, error) {
 	})
 
 	for metric := range metricsChan {
-		m := &Measure{
-			Description: metric.Description(),
-			CreatedAt:   time.Now(),
-		}
-
-		if err := metric.Write(m); err != nil {
+		value, err := metric.Measure()
+		if err != nil {
 			return nil, err
 		}
 
-		measures = append(measures, m)
+		measures = append(measures, &Measure{
+			Description: metric.Description(),
+			CreatedAt:   time.Now(),
+			Value:       value,
+		})
 	}
 
 	return measures, nil

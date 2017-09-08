@@ -17,15 +17,6 @@ type Histogram interface {
 	Quantile(float64) float64
 }
 
-type HistogramMeasure struct {
-	SampleCount    uint64
-	SampleSum      float64
-	SampleMin      float64
-	SampleMax      float64
-	SampleVariance float64
-	Quantiles      map[float64]float64
-}
-
 type histogramMetric struct {
 	selfCollector
 
@@ -56,20 +47,18 @@ func (h *histogramMetric) Description() *Description {
 	return h.description
 }
 
-func (h *histogramMetric) Write(measure *Measure) error {
+func (h *histogramMetric) Measure() (*MeasureValue, error) {
 	h.histogram.RLock()
 	defer h.histogram.RUnlock()
 
-	measure.Histogram = &HistogramMeasure{
-		SampleCount:    uint64(h.histogram.Count()),
-		SampleSum:      h.histogram.Sum(),
-		SampleMin:      h.histogram.Min(),
-		SampleMax:      h.histogram.Max(),
-		SampleVariance: h.histogram.Variance(),
-		Quantiles:      h.histogram.Quantiles(h.quantiles),
-	}
-
-	return nil
+	return &MeasureValue{
+		SampleCount:    &(&struct{ v uint64 }{uint64(h.histogram.Count())}).v,
+		SampleSum:      &(&struct{ v float64 }{h.histogram.Sum()}).v,
+		SampleMin:      &(&struct{ v float64 }{h.histogram.Min()}).v,
+		SampleMax:      &(&struct{ v float64 }{h.histogram.Max()}).v,
+		SampleVariance: &(&struct{ v float64 }{h.histogram.Variance()}).v,
+		Quantiles:      &(&struct{ v map[float64]float64 }{h.histogram.Quantiles(h.quantiles)}).v,
+	}, nil
 }
 
 func (h *histogramMetric) With(labels ...string) Histogram {

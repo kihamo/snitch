@@ -57,47 +57,25 @@ func (s *Influx) Write(measures snitch.Measures) error {
 
 	for _, m := range measures {
 		switch m.Description.Type() {
-		case snitch.MetricTypeCounter:
+		case snitch.MetricTypeUntyped, snitch.MetricTypeCounter, snitch.MetricTypeGauge:
 			fields = map[string]interface{}{
-				"value": m.Counter.Value,
+				"value": *(m.Value.Value),
 			}
 
-		case snitch.MetricTypeGauge:
-			fields = map[string]interface{}{
-				"value": m.Gauge.Value,
-			}
-
-		case snitch.MetricTypeHistogram:
-			if m.Histogram.SampleCount == 0 {
+		case snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
+			if *(m.Value.SampleCount) == 0 {
 				continue
 			}
 
 			fields = map[string]interface{}{
-				"sample_count":    m.Histogram.SampleCount,
-				"sample_sum":      m.Histogram.SampleSum,
-				"sample_min":      m.Histogram.SampleMin,
-				"sample_max":      m.Histogram.SampleMax,
-				"sample_variance": m.Histogram.SampleVariance,
+				"sample_count":    *(m.Value.SampleCount),
+				"sample_sum":      *(m.Value.SampleSum),
+				"sample_min":      *(m.Value.SampleMin),
+				"sample_max":      *(m.Value.SampleMax),
+				"sample_variance": *(m.Value.SampleVariance),
 			}
 
-			for q, v := range m.Histogram.Quantiles {
-				fields[fmt.Sprintf("p%.f", q*100)] = v
-			}
-
-		case snitch.MetricTypeTimer:
-			if m.Timer.SampleCount == 0 {
-				continue
-			}
-
-			fields = map[string]interface{}{
-				"sample_count":    m.Timer.SampleCount,
-				"sample_sum":      m.Timer.SampleSum,
-				"sample_min":      m.Timer.SampleMin,
-				"sample_max":      m.Timer.SampleMax,
-				"sample_variance": m.Timer.SampleVariance,
-			}
-
-			for q, v := range m.Timer.Quantiles {
+			for q, v := range *(m.Value.Quantiles) {
 				fields[fmt.Sprintf("p%.f", q*100)] = v
 			}
 
