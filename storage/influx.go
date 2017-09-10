@@ -68,7 +68,7 @@ func (s *Influx) Write(measures snitch.Measures) error {
 			}
 
 			fields = map[string]interface{}{
-				"sample_count":    *(m.Value.SampleCount),
+				"sample_count":    float64(*(m.Value.SampleCount)),
 				"sample_sum":      *(m.Value.SampleSum),
 				"sample_min":      *(m.Value.SampleMin),
 				"sample_max":      *(m.Value.SampleMax),
