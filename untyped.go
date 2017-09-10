@@ -22,8 +22,9 @@ type Untyped interface {
 type untypedMetric struct {
 	vector
 
-	bits        uint64
-	description *Description
+	valueBits       uint64
+	sampleCountBits uint64
+	description     *Description
 }
 
 func NewUntyped(name, help string, labels ...string) Untyped {
@@ -43,19 +44,22 @@ func (u *untypedMetric) Description() *Description {
 
 func (u *untypedMetric) Measure() (*MeasureValue, error) {
 	return &MeasureValue{
-		Value: Float64(u.Value()),
+		Value:       Float64(u.Value()),
+		SampleCount: Uint64(u.SampleCount()),
 	}, nil
 }
 
 func (u *untypedMetric) Set(value float64) {
-	atomic.StoreUint64(&u.bits, math.Float64bits(value))
+	atomic.StoreUint64(&u.valueBits, math.Float64bits(value))
+	atomic.AddUint64(&u.sampleCountBits, 1)
 }
 
 func (u *untypedMetric) Add(value float64) {
 	for {
-		old := atomic.LoadUint64(&u.bits)
+		old := atomic.LoadUint64(&u.valueBits)
 		new := math.Float64bits(math.Float64frombits(old) + value)
-		if atomic.CompareAndSwapUint64(&u.bits, old, new) {
+		if atomic.CompareAndSwapUint64(&u.valueBits, old, new) {
+			atomic.AddUint64(&u.sampleCountBits, 1)
 			return
 		}
 	}
@@ -74,7 +78,11 @@ func (u *untypedMetric) Dec() {
 }
 
 func (u *untypedMetric) Value() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&u.bits))
+	return math.Float64frombits(atomic.LoadUint64(&u.valueBits))
+}
+
+func (u *untypedMetric) SampleCount() uint64 {
+	return atomic.LoadUint64(&u.sampleCountBits)
 }
 
 func (u *untypedMetric) With(labels ...string) Untyped {

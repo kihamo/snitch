@@ -54,10 +54,13 @@ func (s *Expvar) Write(measures snitch.Measures) error {
 
 		switch m.Description.Type() {
 		case snitch.MetricTypeUntyped, snitch.MetricTypeCounter, snitch.MetricTypeGauge:
-			counter := new(expvar.Float)
-			counter.Set(*(m.Value.Value))
+			value := new(expvar.Float)
+			value.Set(*(m.Value.Value))
+			exp.Set("value", value)
 
-			exp.Set("value", counter)
+			count := new(expvar.Int)
+			count.Set(int64(*(m.Value.SampleCount)))
+			exp.Set("sample_count", count)
 
 		case snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
 			count := new(expvar.Int)

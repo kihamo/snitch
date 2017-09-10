@@ -56,17 +56,18 @@ func (s *Influx) Write(measures snitch.Measures) error {
 	var fields map[string]interface{}
 
 	for _, m := range measures {
+		if *(m.Value.SampleCount) == 0 {
+			continue
+		}
+
 		switch m.Description.Type() {
 		case snitch.MetricTypeUntyped, snitch.MetricTypeCounter, snitch.MetricTypeGauge:
 			fields = map[string]interface{}{
-				"value": *(m.Value.Value),
+				"value":        *(m.Value.Value),
+				"sample_count": float64(*(m.Value.SampleCount)),
 			}
 
 		case snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
-			if *(m.Value.SampleCount) == 0 {
-				continue
-			}
-
 			fields = map[string]interface{}{
 				"sample_count":    float64(*(m.Value.SampleCount)),
 				"sample_sum":      *(m.Value.SampleSum),
