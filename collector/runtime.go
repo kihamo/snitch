@@ -47,9 +47,11 @@ const (
 	MetricMemStatsEnableGC      = "go_memstats_gc_enabled"
 	MetricMemStatsDebugGC       = "go_memstats_gc_debug"
 
+	MetricRuntimeNumCpu       = "go_cpu"
 	MetricRuntimeNumCgoCall   = "go_cgo_calls"
 	MetricRuntimeNumGoroutine = "go_goroutines"
 	MetricRuntimeNumThread    = "go_threads"
+	MetricRuntimeGoMaxProc    = "go_max_proc"
 )
 
 var (
@@ -63,8 +65,10 @@ type runtimeCollector struct {
 	readMemStats snitch.Timer
 	pauseNs      snitch.Histogram
 	numThread    snitch.Gauge
+	numCpu       snitch.Gauge
 	numCgoCall   snitch.Gauge
 	numGoroutine snitch.Gauge
+	goMaxProc    snitch.Gauge
 
 	memStatAlloc      snitch.Gauge
 	memStatTotalAlloc snitch.Counter
@@ -104,8 +108,10 @@ func NewRuntimeCollector() snitch.Collector {
 		readMemStats: snitch.NewTimer(MetricRuntimeReadMemStats, "Lead time of ReadMemStats"),
 		pauseNs:      snitch.NewHistogram(MetricMemStatsPauseNs, ""),
 		numThread:    snitch.NewGauge(MetricRuntimeNumThread, "Number of OS threads created"),
+		numCpu:       snitch.NewGauge(MetricRuntimeNumCpu, "Number of logical CPUs usable by the current process"),
 		numCgoCall:   snitch.NewGauge(MetricRuntimeNumCgoCall, "Number of CGO calls"),
 		numGoroutine: snitch.NewGauge(MetricRuntimeNumGoroutine, "Number of goroutines that currently exist"),
+		goMaxProc:    snitch.NewGauge(MetricRuntimeGoMaxProc, "Maximum number of CPUs that can be executing simultaneously"),
 
 		memStatAlloc:      snitch.NewGauge(MetricMemStatsAlloc, "Number of bytes allocated and still in use"),
 		memStatTotalAlloc: snitch.NewCounter(MetricMemStatsTotalAlloc, "Total number of bytes allocated, even if freed"),
@@ -179,8 +185,10 @@ func (c *runtimeCollector) Describe(ch chan<- *snitch.Description) {
 	c.readMemStats.Describe(ch)
 	c.pauseNs.Describe(ch)
 	c.numThread.Describe(ch)
+	c.numCpu.Describe(ch)
 	c.numCgoCall.Describe(ch)
 	c.numGoroutine.Describe(ch)
+	c.goMaxProc.Describe(ch)
 }
 
 func (c *runtimeCollector) Collect(ch chan<- snitch.Metric) {
@@ -256,8 +264,10 @@ func (c *runtimeCollector) Collect(ch chan<- snitch.Metric) {
 	}
 
 	c.numThread.Set(float64(runtimeThreadCreateProfile.Count()))
+	c.numCpu.Set(float64(runtime.NumCPU()))
 	c.numCgoCall.Set(float64(r.GetNumCgoCall()))
 	c.numGoroutine.Set(float64(runtime.NumGoroutine()))
+	c.goMaxProc.Set(float64(runtime.GOMAXPROCS(-1)))
 
 	runtimeNumGC = ms.NumGC
 
@@ -265,8 +275,10 @@ func (c *runtimeCollector) Collect(ch chan<- snitch.Metric) {
 	c.readMemStats.Collect(ch)
 	c.pauseNs.Collect(ch)
 	c.numThread.Collect(ch)
+	c.numCpu.Collect(ch)
 	c.numCgoCall.Collect(ch)
 	c.numGoroutine.Collect(ch)
+	c.goMaxProc.Collect(ch)
 
 	c.memStatAlloc.Collect(ch)
 	c.memStatTotalAlloc.Collect(ch)
