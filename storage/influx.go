@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"math"
 	"sync"
 
 	influxdb "github.com/influxdata/influxdb/client/v2"
@@ -69,26 +70,44 @@ func (s *Influx) Write(measures snitch.Measures) error {
 
 		case snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
 			fields = map[string]interface{}{
-				"sample_count":    float64(*(m.Value.SampleCount)),
-				"sample_sum":      *(m.Value.SampleSum),
-				"sample_min":      *(m.Value.SampleMin),
-				"sample_max":      *(m.Value.SampleMax),
-				"sample_variance": *(m.Value.SampleVariance),
+				"sample_count": float64(*(m.Value.SampleCount)),
+			}
+
+			if !math.IsNaN(*(m.Value.SampleSum)) {
+				fields["sample_sum"] = *(m.Value.SampleSum)
+			}
+
+			if !math.IsNaN(*(m.Value.SampleMin)) {
+				fields["sample_min"] = *(m.Value.SampleMin)
+			}
+
+			if !math.IsNaN(*(m.Value.SampleMax)) {
+				fields["sample_max"] = *(m.Value.SampleMax)
+			}
+
+			if !math.IsNaN(*(m.Value.SampleVariance)) {
+				fields["sample_variance"] = *(m.Value.SampleVariance)
 			}
 
 			for q, v := range m.Value.Quantiles {
-				fields[fmt.Sprintf("p%.f", q*100)] = *v
+				if !math.IsNaN(*v) {
+					fields[fmt.Sprintf("p%.f", q*100)] = *v
+				}
 			}
 
 		default:
 			continue
 		}
 
-		localLabels := globalLabels.WithLabels(m.Description.Labels()).Map()
+		localLabels := globalLabels.WithLabels(m.Description.Labels())
 
-		p, err := influxdb.NewPoint(m.Description.Name(), localLabels, fields, m.CreatedAt)
+		p, err := influxdb.NewPoint(m.Description.Name(), localLabels.Map(), fields, m.CreatedAt)
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed create point for %s metric with labels %s because %s",
+				m.Description.Name(),
+				localLabels.String(),
+				err.Error(),
+			)
 		}
 
 		bp.AddPoint(p)
