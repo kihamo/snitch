@@ -103,10 +103,10 @@ func (s *Influx) Write(measures snitch.Measures) error {
 
 		p, err := influxdb.NewPoint(m.Description.Name(), localLabels.Map(), fields, m.CreatedAt)
 		if err != nil {
-			return fmt.Errorf("Failed create point for %s metric with labels %s because %s",
+			return fmt.Errorf("failed create point for %s metric with labels %s because %v",
 				m.Description.Name(),
-				localLabels.String(),
-				err.Error(),
+				localLabels,
+				err,
 			)
 		}
 

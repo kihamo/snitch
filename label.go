@@ -28,14 +28,7 @@ func (l Labels) Less(i, j int) bool {
 }
 
 func (l Labels) WithMap(labels map[string]string) Labels {
-	ret := make(Labels, 0, len(l)+len(labels))
-
-	for _, value := range l {
-		ret = append(ret, &Label{
-			Key:   value.Key,
-			Value: value.Value,
-		})
-	}
+	ret := make(Labels, 0, len(labels))
 
 	for key, value := range labels {
 		ret = append(ret, &Label{
@@ -44,31 +37,11 @@ func (l Labels) WithMap(labels map[string]string) Labels {
 		})
 	}
 
-	sort.Sort(ret)
-
-	return ret
+	return l.WithLabels(ret)
 }
 
 func (l Labels) WithLabels(labels Labels) Labels {
-	ret := make(Labels, 0, len(l)+len(labels))
-
-	for _, value := range l {
-		ret = append(ret, &Label{
-			Key:   value.Key,
-			Value: value.Value,
-		})
-	}
-
-	for _, label := range labels {
-		ret = append(ret, &Label{
-			Key:   label.Key,
-			Value: label.Value,
-		})
-	}
-
-	sort.Sort(ret)
-
-	return ret
+	return append(l, labels...)
 }
 
 func (l Labels) With(labels ...string) Labels {
@@ -76,18 +49,7 @@ func (l Labels) With(labels ...string) Labels {
 		labels = append(labels, "unknown")
 	}
 
-	ret := make(Labels, 0, len(l)+len(labels)/2)
-
-	for _, value := range l {
-		ret = append(ret, &Label{
-			Key:   value.Key,
-			Value: value.Value,
-		})
-	}
-
-	if len(labels) == 0 {
-		return ret
-	}
+	ret := make(Labels, 0, len(labels)/2)
 
 	for i := 1; i < len(labels); i += 2 {
 		ret = append(ret, &Label{
@@ -96,13 +58,12 @@ func (l Labels) With(labels ...string) Labels {
 		})
 	}
 
-	sort.Sort(ret)
-
-	return ret
+	return l.WithLabels(ret)
 }
 
 func (l Labels) String() string {
 	lvs := make([]string, len(l))
+	sort.Sort(l)
 
 	for i, label := range l {
 		lvs[i] = label.String()
