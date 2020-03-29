@@ -1,0 +1,26 @@
+run:
+  skip-dirs-use-default: true
+
+linters:
+  enable:
+    - bodyclose
+    - golint
+    - interfacer
+    - unconvert
+    - maligned
+    - unparam
+    - dogsled
+    - nakedret
+    - prealloc
+    - scopelint
+    - gocritic
+    - whitespace
+    - wsl
+    - goprintffuncname
+  disable:
+    - errcheck
+    - gochecknoglobals
+
+linters-settings:
+  maligned:
+    suggest-new: true

@@ -23,7 +23,7 @@ func main() {
 	//	log.Panic(err.Error())
 	//}
 
-	s := storage.NewExpvarWithId("metrics")
+	s := storage.NewExpvarWithID("metrics")
 
 	snitch.DefaultRegisterer.AddStorages(s)
 

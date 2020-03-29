@@ -20,10 +20,10 @@ type Influx struct {
 }
 
 func NewInflux(url, database, username, password, precision string) (*Influx, error) {
-	return NewInfluxWithId("", url, database, username, password, precision)
+	return NewInfluxWithID("", url, database, username, password, precision)
 }
 
-func NewInfluxWithId(id, url, database, username, password, precision string) (*Influx, error) {
+func NewInfluxWithID(id, url, database, username, password, precision string) (*Influx, error) {
 	if id == "" {
 		id = uuid.New()
 	}
@@ -40,7 +40,7 @@ func NewInfluxWithId(id, url, database, username, password, precision string) (*
 	return storage, nil
 }
 
-func (s *Influx) Id() string {
+func (s *Influx) ID() string {
 	return s.id
 }
 

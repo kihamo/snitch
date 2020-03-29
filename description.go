@@ -40,7 +40,7 @@ func NewDescription(name, help string, typ MetricType, labels ...string) *Descri
 	}
 }
 
-func (d *Description) Id() string {
+func (d *Description) ID() string {
 	return d.id
 }
 

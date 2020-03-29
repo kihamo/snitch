@@ -57,8 +57,9 @@ func (u *untypedMetric) Set(value float64) {
 func (u *untypedMetric) Add(value float64) {
 	for {
 		old := atomic.LoadUint64(&u.valueBits)
-		new := math.Float64bits(math.Float64frombits(old) + value)
-		if atomic.CompareAndSwapUint64(&u.valueBits, old, new) {
+		current := math.Float64bits(math.Float64frombits(old) + value)
+
+		if atomic.CompareAndSwapUint64(&u.valueBits, old, current) {
 			atomic.AddUint64(&u.sampleCountBits, 1)
 			return
 		}

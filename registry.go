@@ -16,10 +16,7 @@ const (
 	notRunningSendInterval = time.Hour
 )
 
-var (
-	// TODO: create not modified storage
-	DefaultRegisterer Registerer = NewRegistry(0)
-)
+var DefaultRegisterer = NewRegistry(0) // TODO: create not modified storage
 
 type Registerer interface {
 	Register(...Collector)
@@ -67,7 +64,7 @@ func (r *Registry) Register(cs ...Collector) {
 		}()
 
 		for d := range descriptionsChan {
-			r.descriptions.Store(d.Id(), d)
+			r.descriptions.Store(d.ID(), d)
 		}
 
 		r.collectors.Store(uuid.New(), c)
@@ -83,6 +80,7 @@ func (r *Registry) Walk(f func(*Description)) {
 
 func (r *Registry) Gather() (Measures, error) {
 	var wg sync.WaitGroup
+
 	metricsChan := make(chan Metric, sizeOfCollectChannel)
 	measures := Measures{}
 
@@ -178,7 +176,7 @@ func (r *Registry) AddStorages(ss ...Storage) {
 			rs.SetCallback(r.Gather)
 		}
 
-		r.storages.Store(s.Id(), s)
+		r.storages.Store(s.ID(), s)
 	}
 }
 

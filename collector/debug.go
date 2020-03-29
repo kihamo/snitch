@@ -59,6 +59,7 @@ func (c *debugCollector) Collect(ch chan<- snitch.Metric) {
 	gcLast := debugGCStats.LastGC
 
 	t := time.Now()
+
 	debug.ReadGCStats(&debugGCStats)
 	c.CGReadStats.UpdateSince(t)
 

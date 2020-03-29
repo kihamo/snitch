@@ -20,10 +20,10 @@ type Expvar struct {
 }
 
 func NewExpvar() *Expvar {
-	return NewExpvarWithId("")
+	return NewExpvarWithID("")
 }
 
-func NewExpvarWithId(id string) *Expvar {
+func NewExpvarWithID(id string) *Expvar {
 	if id == "" {
 		id = uuid.New()
 	}
@@ -40,7 +40,7 @@ func NewExpvarWithId(id string) *Expvar {
 	return storage
 }
 
-func (s *Expvar) Id() string {
+func (s *Expvar) ID() string {
 	return s.id
 }
 

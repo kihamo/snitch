@@ -1,7 +1,6 @@
 package snitch
 
 import (
-	"math"
 	"sort"
 	"strings"
 )
@@ -46,6 +45,7 @@ func (l Labels) WithMap(labels map[string]string) Labels {
 	}
 
 	sort.Sort(ret)
+
 	return ret
 }
 
@@ -67,11 +67,16 @@ func (l Labels) WithLabels(labels Labels) Labels {
 	}
 
 	sort.Sort(ret)
+
 	return ret
 }
 
 func (l Labels) With(labels ...string) Labels {
-	ret := make(Labels, 0, len(l)+int(math.Floor(float64(len(labels)/2)))+1)
+	if len(labels)%2 != 0 {
+		labels = append(labels, "unknown")
+	}
+
+	ret := make(Labels, 0, len(l)+len(labels)/2)
 
 	for _, value := range l {
 		ret = append(ret, &Label{
@@ -84,10 +89,6 @@ func (l Labels) With(labels ...string) Labels {
 		return ret
 	}
 
-	if len(labels)%2 != 0 {
-		labels = append(labels, "unknown")
-	}
-
 	for i := 1; i < len(labels); i += 2 {
 		ret = append(ret, &Label{
 			Key:   labels[i-1],
@@ -96,6 +97,7 @@ func (l Labels) With(labels ...string) Labels {
 	}
 
 	sort.Sort(ret)
+
 	return ret
 }
 
