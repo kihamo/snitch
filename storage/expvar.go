@@ -4,11 +4,77 @@ import (
 	"expvar"
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/kihamo/snitch"
 	"github.com/pborman/uuid"
 )
+
+type Var struct {
+	expvar.Var
+
+	description *snitch.Description
+	value       *snitch.MeasureValue
+	labels      func() snitch.Labels
+}
+
+func (v *Var) String() string {
+	var b strings.Builder
+
+	fmt.Fprintf(&b, "{\"help\": %q", v.description.Help())
+
+	switch v.description.Type() {
+	case snitch.MetricTypeUntyped, snitch.MetricTypeCounter, snitch.MetricTypeGauge:
+		fmt.Fprint(&b, ",\"value\": "+strconv.FormatFloat(*(v.value.Value), 'g', -1, 64))
+		fmt.Fprint(&b, ",\"sample_count\": "+strconv.FormatUint(*(v.value.SampleCount), 10))
+
+	case snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
+		fmt.Fprint(&b, ",\"sample_count\": "+strconv.FormatUint(*(v.value.SampleCount), 10))
+
+		if !math.IsNaN(*(v.value.SampleSum)) {
+			fmt.Fprint(&b, ",\"sample_sum\": "+strconv.FormatFloat(*(v.value.SampleSum), 'g', -1, 64))
+		}
+
+		if !math.IsNaN(*(v.value.SampleMin)) {
+			fmt.Fprint(&b, ",\"sample_min\": "+strconv.FormatFloat(*(v.value.SampleMin), 'g', -1, 64))
+		}
+
+		if !math.IsNaN(*(v.value.SampleMax)) {
+			fmt.Fprint(&b, ",\"sample_max\": "+strconv.FormatFloat(*(v.value.SampleMax), 'g', -1, 64))
+		}
+
+		if !math.IsNaN(*(v.value.SampleVariance)) {
+			fmt.Fprint(&b, ",\"sample_variance\": "+strconv.FormatFloat(*(v.value.SampleVariance), 'g', -1, 64))
+		}
+
+		for q, val := range v.value.Quantiles {
+			if !math.IsNaN(*val) {
+				fmt.Fprint(&b, ",\"p"+strconv.FormatInt(int64(q*100), 10)+"\": "+strconv.FormatFloat(*val, 'g', -1, 64))
+			}
+		}
+	}
+
+	localLabels := v.labels().WithLabels(v.description.Labels())
+	if len(localLabels) > 0 {
+		fmt.Fprint(&b, ",\"labels\": {")
+
+		for i, label := range localLabels {
+			if i != 0 {
+				fmt.Fprint(&b, ",")
+			}
+
+			fmt.Fprint(&b, "\""+label.Key+"\": \""+label.Value+"\"")
+		}
+
+		fmt.Fprint(&b, "}")
+	}
+
+	fmt.Fprintf(&b, "}")
+
+	return b.String()
+}
 
 type Expvar struct {
 	mutex sync.RWMutex
@@ -45,84 +111,27 @@ func (s *Expvar) ID() string {
 }
 
 func (s *Expvar) Write(measures snitch.Measures) error {
-	s.mutex.RLock()
-	globalLabels := s.labels
-	s.mutex.RUnlock()
+	var v *Var
 
 	for _, m := range measures {
-		exp := new(expvar.Map).Init()
-
 		switch m.Description.Type() {
-		case snitch.MetricTypeUntyped, snitch.MetricTypeCounter, snitch.MetricTypeGauge:
-			value := new(expvar.Float)
-			value.Set(*(m.Value.Value))
-			exp.Set("value", value)
-
-			count := new(expvar.Int)
-			count.Set(int64(*(m.Value.SampleCount)))
-			exp.Set("sample_count", count)
-
-		case snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
-			count := new(expvar.Int)
-			count.Set(int64(*(m.Value.SampleCount)))
-			exp.Set("sample_count", count)
-
-			if !math.IsNaN(*(m.Value.SampleSum)) {
-				sum := new(expvar.Float)
-				sum.Set(*(m.Value.SampleSum))
-				exp.Set("sample_sum", sum)
-			}
-
-			if !math.IsNaN(*(m.Value.SampleMin)) {
-				min := new(expvar.Float)
-				min.Set(*(m.Value.SampleMin))
-				exp.Set("sample_min", min)
-			}
-
-			if !math.IsNaN(*(m.Value.SampleMax)) {
-				max := new(expvar.Float)
-				max.Set(*(m.Value.SampleMax))
-				exp.Set("sample_max", max)
-			}
-
-			if !math.IsNaN(*(m.Value.SampleVariance)) {
-				variance := new(expvar.Float)
-				variance.Set(*(m.Value.SampleVariance))
-				exp.Set("sample_variance", variance)
-			}
-
-			for q, v := range m.Value.Quantiles {
-				if !math.IsNaN(*v) {
-					quantile := new(expvar.Float)
-					quantile.Set(*v)
-					exp.Set(fmt.Sprintf("p%.f", q*100), quantile)
+		case snitch.MetricTypeUntyped, snitch.MetricTypeCounter, snitch.MetricTypeGauge, snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
+			if exists := s.expvar.Get(m.Description.Name()); exists != nil {
+				v = exists.(*Var)
+			} else {
+				v = &Var{
+					description: m.Description,
+					labels:      s.getLabels,
 				}
+
+				s.expvar.Set(m.Description.Name(), v)
 			}
+
+			v.value = m.Value
 
 		default:
 			continue
 		}
-
-		localLabels := globalLabels.WithLabels(m.Description.Labels())
-		if len(localLabels) > 0 {
-			expLabels := new(expvar.Map).Init()
-
-			for _, label := range localLabels {
-				labelExp := new(expvar.String)
-				labelExp.Set(label.Value)
-
-				expLabels.Set(label.Key, labelExp)
-			}
-
-			exp.Set("labels", expLabels)
-		}
-
-		help := new(expvar.String)
-		help.Set(m.Description.Help())
-
-		exp.Set("help", help)
-
-		s.expvar.Set(m.Description.Name(), exp)
 	}
 
 	return nil
@@ -133,6 +142,13 @@ func (s *Expvar) SetLabels(l snitch.Labels) {
 	defer s.mutex.Unlock()
 
 	s.labels = l
+}
+
+func (s *Expvar) getLabels() snitch.Labels {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	return s.labels
 }
 
 func (s *Expvar) SetCallback(f func() (snitch.Measures, error)) {
