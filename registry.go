@@ -185,14 +185,18 @@ func (r *Registry) GetStorage(id string) (Storage, error) {
 		return s.(Storage), nil
 	}
 
-	return nil, fmt.Errorf("Storage %s not exists", id)
+	return nil, fmt.Errorf("storage %s not exists", id)
 }
 
 func (r *Registry) SetLabels(l Labels) {
 	r.mutex.Lock()
-	defer r.mutex.Unlock()
-
 	r.labels = l
+	r.mutex.Unlock()
+
+	r.storages.Range(func(_, value interface{}) bool {
+		value.(Storage).SetLabels(l)
+		return true
+	})
 }
 
 func (r *Registry) SendInterval(d time.Duration) {

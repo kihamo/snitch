@@ -15,6 +15,7 @@ import (
 type Var struct {
 	expvar.Var
 
+	lock        sync.RWMutex
 	description *snitch.Description
 	value       *snitch.MeasureValue
 	labels      func() snitch.Labels
@@ -23,44 +24,48 @@ type Var struct {
 func (v *Var) String() string {
 	var b strings.Builder
 
+	v.lock.RLock()
+	val := v.value
+	v.lock.RUnlock()
+
 	fmt.Fprintf(&b, "{\"help\": %q", v.description.Help())
 
 	switch v.description.Type() {
 	case snitch.MetricTypeUntyped, snitch.MetricTypeCounter, snitch.MetricTypeGauge:
-		fmt.Fprint(&b, ",\"value\": "+strconv.FormatFloat(*(v.value.Value), 'g', -1, 64))
-		fmt.Fprint(&b, ",\"sample_count\": "+strconv.FormatUint(*(v.value.SampleCount), 10))
+		fmt.Fprint(&b, ",\"value\": "+strconv.FormatFloat(*(val.Value), 'g', -1, 64))
+		fmt.Fprint(&b, ",\"sample_count\": "+strconv.FormatUint(*(val.SampleCount), 10))
 
 	case snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
-		fmt.Fprint(&b, ",\"sample_count\": "+strconv.FormatUint(*(v.value.SampleCount), 10))
+		fmt.Fprint(&b, ",\"sample_count\": "+strconv.FormatUint(*(val.SampleCount), 10))
 
-		if !math.IsNaN(*(v.value.SampleSum)) {
-			fmt.Fprint(&b, ",\"sample_sum\": "+strconv.FormatFloat(*(v.value.SampleSum), 'g', -1, 64))
+		if !math.IsNaN(*(val.SampleSum)) {
+			fmt.Fprint(&b, ",\"sample_sum\": "+strconv.FormatFloat(*(val.SampleSum), 'g', -1, 64))
 		}
 
-		if !math.IsNaN(*(v.value.SampleMin)) {
-			fmt.Fprint(&b, ",\"sample_min\": "+strconv.FormatFloat(*(v.value.SampleMin), 'g', -1, 64))
+		if !math.IsNaN(*(val.SampleMin)) {
+			fmt.Fprint(&b, ",\"sample_min\": "+strconv.FormatFloat(*(val.SampleMin), 'g', -1, 64))
 		}
 
-		if !math.IsNaN(*(v.value.SampleMax)) {
-			fmt.Fprint(&b, ",\"sample_max\": "+strconv.FormatFloat(*(v.value.SampleMax), 'g', -1, 64))
+		if !math.IsNaN(*(val.SampleMax)) {
+			fmt.Fprint(&b, ",\"sample_max\": "+strconv.FormatFloat(*(val.SampleMax), 'g', -1, 64))
 		}
 
-		if !math.IsNaN(*(v.value.SampleVariance)) {
-			fmt.Fprint(&b, ",\"sample_variance\": "+strconv.FormatFloat(*(v.value.SampleVariance), 'g', -1, 64))
+		if !math.IsNaN(*(val.SampleVariance)) {
+			fmt.Fprint(&b, ",\"sample_variance\": "+strconv.FormatFloat(*(val.SampleVariance), 'g', -1, 64))
 		}
 
-		for q, val := range v.value.Quantiles {
+		for q, val := range val.Quantiles {
 			if !math.IsNaN(*val) {
 				fmt.Fprint(&b, ",\"p"+strconv.FormatInt(int64(q*100), 10)+"\": "+strconv.FormatFloat(*val, 'g', -1, 64))
 			}
 		}
 	}
 
-	localLabels := v.labels().WithLabels(v.description.Labels())
-	if len(localLabels) > 0 {
+	labels := v.labels().WithLabels(v.description.Labels())
+	if len(labels) > 0 {
 		fmt.Fprint(&b, ",\"labels\": {")
 
-		for i, label := range localLabels {
+		for i, label := range labels {
 			if i != 0 {
 				fmt.Fprint(&b, ",")
 			}
@@ -74,6 +79,12 @@ func (v *Var) String() string {
 	fmt.Fprintf(&b, "}")
 
 	return b.String()
+}
+
+func (v *Var) update(value *snitch.MeasureValue) {
+	v.lock.Lock()
+	v.value = value
+	v.lock.Unlock()
 }
 
 type Expvar struct {
@@ -111,23 +122,18 @@ func (s *Expvar) ID() string {
 }
 
 func (s *Expvar) Write(measures snitch.Measures) error {
-	var v *Var
-
 	for _, m := range measures {
 		switch m.Description.Type() {
 		case snitch.MetricTypeUntyped, snitch.MetricTypeCounter, snitch.MetricTypeGauge, snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
 			if exists := s.expvar.Get(m.Description.Name()); exists != nil {
-				v = exists.(*Var)
+				exists.(*Var).update(m.Value)
 			} else {
-				v = &Var{
+				s.expvar.Set(m.Description.Name(), &Var{
 					description: m.Description,
 					labels:      s.getLabels,
-				}
-
-				s.expvar.Set(m.Description.Name(), v)
+					value:       m.Value,
+				})
 			}
-
-			v.value = m.Value
 
 		default:
 			continue
