@@ -1,7 +1,6 @@
 package snitch
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 )
@@ -69,10 +68,10 @@ func (l Labels) String() string {
 
 	for i, label := range l {
 		if i != 0 {
-			fmt.Fprint(&b, ",")
+			b.WriteString(",")
 		}
 
-		fmt.Fprint(&b, label.String())
+		b.WriteString(label.String())
 	}
 
 	return b.String()

@@ -2,7 +2,6 @@ package storage
 
 import (
 	"expvar"
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -28,55 +27,55 @@ func (v *Var) String() string {
 	val := v.value
 	v.lock.RUnlock()
 
-	fmt.Fprintf(&b, "{\"help\": %q", v.description.Help())
+	b.WriteString("{\"help\": \"" + v.description.Help() + "\"")
 
 	switch v.description.Type() {
 	case snitch.MetricTypeUntyped, snitch.MetricTypeCounter, snitch.MetricTypeGauge:
-		fmt.Fprint(&b, ",\"value\": "+strconv.FormatFloat(*(val.Value), 'g', -1, 64))
-		fmt.Fprint(&b, ",\"sample_count\": "+strconv.FormatUint(*(val.SampleCount), 10))
+		b.WriteString(",\"value\": " + strconv.FormatFloat(*(val.Value), 'g', -1, 64))
+		b.WriteString(",\"sample_count\": " + strconv.FormatUint(*(val.SampleCount), 10))
 
 	case snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
-		fmt.Fprint(&b, ",\"sample_count\": "+strconv.FormatUint(*(val.SampleCount), 10))
+		b.WriteString(",\"sample_count\": " + strconv.FormatUint(*(val.SampleCount), 10))
 
 		if !math.IsNaN(*(val.SampleSum)) {
-			fmt.Fprint(&b, ",\"sample_sum\": "+strconv.FormatFloat(*(val.SampleSum), 'g', -1, 64))
+			b.WriteString(",\"sample_sum\": " + strconv.FormatFloat(*(val.SampleSum), 'g', -1, 64))
 		}
 
 		if !math.IsNaN(*(val.SampleMin)) {
-			fmt.Fprint(&b, ",\"sample_min\": "+strconv.FormatFloat(*(val.SampleMin), 'g', -1, 64))
+			b.WriteString(",\"sample_min\": " + strconv.FormatFloat(*(val.SampleMin), 'g', -1, 64))
 		}
 
 		if !math.IsNaN(*(val.SampleMax)) {
-			fmt.Fprint(&b, ",\"sample_max\": "+strconv.FormatFloat(*(val.SampleMax), 'g', -1, 64))
+			b.WriteString(",\"sample_max\": " + strconv.FormatFloat(*(val.SampleMax), 'g', -1, 64))
 		}
 
 		if !math.IsNaN(*(val.SampleVariance)) {
-			fmt.Fprint(&b, ",\"sample_variance\": "+strconv.FormatFloat(*(val.SampleVariance), 'g', -1, 64))
+			b.WriteString(",\"sample_variance\": " + strconv.FormatFloat(*(val.SampleVariance), 'g', -1, 64))
 		}
 
 		for q, val := range val.Quantiles {
 			if !math.IsNaN(*val) {
-				fmt.Fprint(&b, ",\"p"+strconv.FormatInt(int64(q*100), 10)+"\": "+strconv.FormatFloat(*val, 'g', -1, 64))
+				b.WriteString(",\"p" + strconv.FormatInt(int64(q*100), 10) + "\": " + strconv.FormatFloat(*val, 'g', -1, 64))
 			}
 		}
 	}
 
 	labels := v.labels().WithLabels(v.description.Labels())
 	if len(labels) > 0 {
-		fmt.Fprint(&b, ",\"labels\": {")
+		b.WriteString(",\"labels\": {")
 
 		for i, label := range labels {
 			if i != 0 {
-				fmt.Fprint(&b, ",")
+				b.WriteString(",")
 			}
 
-			fmt.Fprint(&b, "\""+label.Key+"\": \""+label.Value+"\"")
+			b.WriteString("\"" + label.Key + "\": \"" + label.Value + "\"")
 		}
 
-		fmt.Fprint(&b, "}")
+		b.WriteString("}")
 	}
 
-	fmt.Fprintf(&b, "}")
+	b.WriteString("}")
 
 	return b.String()
 }
