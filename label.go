@@ -1,6 +1,7 @@
 package snitch
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 )
@@ -62,14 +63,19 @@ func (l Labels) With(labels ...string) Labels {
 }
 
 func (l Labels) String() string {
-	lvs := make([]string, len(l))
+	var b strings.Builder
+
 	sort.Sort(l)
 
 	for i, label := range l {
-		lvs[i] = label.String()
+		if i != 0 {
+			fmt.Fprint(&b, ",")
+		}
+
+		fmt.Fprint(&b, label.String())
 	}
 
-	return strings.Join(lvs, ",")
+	return b.String()
 }
 
 func (l Labels) Map() map[string]string {
