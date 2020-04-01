@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"go.uber.org/multierr"
 )
 
 const (
@@ -122,7 +123,7 @@ func (r *Registry) Gather() (Measures, error) {
 func (r *Registry) GatherAndSend() error {
 	measures, err := r.Gather()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	var sizeOfStorages int
@@ -163,7 +164,7 @@ func (r *Registry) GatherAndSend() error {
 
 	for e := range errorChan {
 		if e != nil {
-			err = e
+			err = multierr.Append(err, e)
 		}
 	}
 

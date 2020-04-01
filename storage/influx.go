@@ -54,7 +54,10 @@ func (s *Influx) Write(measures snitch.Measures) error {
 		return err
 	}
 
-	var fields map[string]interface{}
+	var (
+		fieldsOne, fieldsTwo map[string]interface{}
+		point                *influxdb.Point
+	)
 
 	for _, m := range measures {
 		if *(m.Value.SampleCount) == 0 {
@@ -63,54 +66,71 @@ func (s *Influx) Write(measures snitch.Measures) error {
 
 		switch m.Description.Type() {
 		case snitch.MetricTypeUntyped, snitch.MetricTypeCounter, snitch.MetricTypeGauge:
-			fields = map[string]interface{}{
-				"value":        *(m.Value.Value),
-				"sample_count": float64(*(m.Value.SampleCount)),
+			if fieldsOne == nil {
+				fieldsOne = make(map[string]interface{}, 2)
 			}
+
+			fieldsOne["value"] = *(m.Value.Value)
+			fieldsOne["sample_count"] = float64(*(m.Value.SampleCount))
+
+			point, err = influxdb.NewPoint(
+				m.Description.Name(),
+				globalLabels.WithLabels(m.Description.Labels()).Map(),
+				fieldsOne,
+				m.CreatedAt)
 
 		case snitch.MetricTypeHistogram, snitch.MetricTypeTimer:
-			fields = map[string]interface{}{
-				"sample_count": float64(*(m.Value.SampleCount)),
+			if fieldsTwo == nil {
+				fieldsTwo = make(map[string]interface{}, 5+100)
+			} else {
+				for i := range fieldsTwo {
+					delete(fieldsTwo, i)
+				}
 			}
 
+			fieldsTwo["sample_count"] = float64(*(m.Value.SampleCount))
+
 			if !math.IsNaN(*(m.Value.SampleSum)) {
-				fields["sample_sum"] = *(m.Value.SampleSum)
+				fieldsTwo["sample_sum"] = *(m.Value.SampleSum)
 			}
 
 			if !math.IsNaN(*(m.Value.SampleMin)) {
-				fields["sample_min"] = *(m.Value.SampleMin)
+				fieldsTwo["sample_min"] = *(m.Value.SampleMin)
 			}
 
 			if !math.IsNaN(*(m.Value.SampleMax)) {
-				fields["sample_max"] = *(m.Value.SampleMax)
+				fieldsTwo["sample_max"] = *(m.Value.SampleMax)
 			}
 
 			if !math.IsNaN(*(m.Value.SampleVariance)) {
-				fields["sample_variance"] = *(m.Value.SampleVariance)
+				fieldsTwo["sample_variance"] = *(m.Value.SampleVariance)
 			}
 
 			for q, v := range m.Value.Quantiles {
 				if !math.IsNaN(*v) {
-					fields[fmt.Sprintf("p%.f", q*100)] = *v
+					fieldsTwo[fmt.Sprintf("p%.f", q*100)] = *v
 				}
 			}
+
+			point, err = influxdb.NewPoint(
+				m.Description.Name(),
+				globalLabels.WithLabels(m.Description.Labels()).Map(),
+				fieldsTwo,
+				m.CreatedAt)
 
 		default:
 			continue
 		}
 
-		localLabels := globalLabels.WithLabels(m.Description.Labels())
-
-		p, err := influxdb.NewPoint(m.Description.Name(), localLabels.Map(), fields, m.CreatedAt)
 		if err != nil {
 			return fmt.Errorf("failed create point for %s metric with labels %s because %v",
 				m.Description.Name(),
-				localLabels,
+				globalLabels.WithLabels(m.Description.Labels()).Map(),
 				err,
 			)
 		}
 
-		bp.AddPoint(p)
+		bp.AddPoint(point)
 	}
 
 	s.mutex.RLock()
