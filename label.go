@@ -27,6 +27,14 @@ func (l Labels) Less(i, j int) bool {
 	return cmp < 0
 }
 
+func (l Labels) WithLabels(labels Labels) Labels {
+	if len(l) == 0 {
+		return labels
+	}
+
+	return append(l, labels...)
+}
+
 func (l Labels) WithMap(labels map[string]string) Labels {
 	ret := make(Labels, 0, len(labels))
 
@@ -38,10 +46,6 @@ func (l Labels) WithMap(labels map[string]string) Labels {
 	}
 
 	return l.WithLabels(ret)
-}
-
-func (l Labels) WithLabels(labels Labels) Labels {
-	return append(l, labels...)
 }
 
 func (l Labels) With(labels ...string) Labels {

@@ -1,25 +1,20 @@
 package snitch
 
 import (
-	"io"
 	"sort"
-	"strings"
 	"sync"
 
 	"github.com/OneOfOne/xxhash"
 )
 
 type vector struct {
-	mutex sync.RWMutex
-
 	metric   Metric
-	children map[uint64]Metric
+	children sync.Map
 	creator  func(...string) Metric
 }
 
 func (v *vector) init(metric Metric, creator func(...string) Metric) {
 	v.metric = metric
-	v.children = map[uint64]Metric{}
 	v.creator = creator
 }
 
@@ -28,48 +23,34 @@ func (v *vector) Describe(ch chan<- *Description) {
 }
 
 func (v *vector) Collect(ch chan<- Metric) {
-	v.mutex.RLock()
-	defer v.mutex.RUnlock()
+	var found bool
 
-	if len(v.children) == 0 {
+	v.children.Range(func(_, value interface{}) bool {
+		found = true
+		ch <- value.(Metric)
+
+		return true
+	})
+
+	if !found {
 		ch <- v.metric
-	} else {
-		for _, m := range v.children {
-			ch <- m
-		}
 	}
 }
 
-func (v *vector) With(labels ...string) Metric {
-	return v.loadOrStore(labels...)
-}
-
-func (v *vector) hash(labels ...string) uint64 {
+func (v *vector) With(labels ...string) (metric Metric) {
 	l := Labels{}.With(labels...)
 	sort.Sort(l)
 
 	h := xxhash.New64()
-	r := strings.NewReader(l.String())
+	h.WriteString(l.String())
+	hash := h.Sum64()
 
-	io.Copy(h, r)
-
-	return h.Sum64()
-}
-
-func (v *vector) loadOrStore(labels ...string) Metric {
-	hash := v.hash(labels...)
-
-	v.mutex.RLock()
-	metric, ok := v.children[hash]
-	v.mutex.RUnlock()
-
-	if !ok {
-		metric = v.creator(labels...)
-
-		v.mutex.Lock()
-		v.children[hash] = metric
-		v.mutex.Unlock()
+	if val, ok := v.children.Load(hash); ok {
+		return val.(Metric)
 	}
+
+	metric = v.creator(labels...)
+	v.children.Store(hash, metric)
 
 	return metric
 }
