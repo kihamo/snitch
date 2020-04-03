@@ -156,16 +156,17 @@ func (r *Registry) GatherAndSend() error {
 			defer wg.Done()
 
 			s.SetLabels(l)
-			errorChan <- s.Write(m)
+			if e := s.Write(m); e != nil {
+				errorChan <- e
+			}
+
 		}(value.(Storage), measures, l)
 
 		return true
 	})
 
 	for e := range errorChan {
-		if e != nil {
-			err = multierr.Append(err, e)
-		}
+		err = multierr.Append(err, e)
 	}
 
 	return err

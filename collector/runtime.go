@@ -218,6 +218,7 @@ func (c *runtimeCollector) Collect(ch chan<- snitch.Metric) {
 
 	c.memStatsStackInuse.Set(float64(ms.StackInuse))
 	c.memStatsStackSys.Set(float64(ms.StackSys))
+
 	c.memStatsMSpanInuse.Set(float64(ms.MSpanInuse))
 	c.memStatsMSpanSys.Set(float64(ms.MSpanSys))
 	c.memStatsMCacheInuse.Set(float64(ms.MCacheInuse))
