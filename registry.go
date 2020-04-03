@@ -159,7 +159,6 @@ func (r *Registry) GatherAndSend() error {
 			if e := s.Write(m); e != nil {
 				errorChan <- e
 			}
-
 		}(value.(Storage), measures, l)
 
 		return true
