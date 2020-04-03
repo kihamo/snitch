@@ -70,7 +70,12 @@ func (s *Influx) Write(measures snitch.Measures) error {
 				fieldsOne = make(map[string]interface{}, 2)
 			}
 
-			fieldsOne["value"] = *(m.Value.Value)
+			if v := *(m.Value.Value); !math.IsNaN(v) {
+				fieldsOne["value"] = v
+			} else {
+				continue
+			}
+
 			fieldsOne["sample_count"] = float64(*(m.Value.SampleCount))
 
 			point, err = influxdb.NewPoint(
@@ -90,20 +95,20 @@ func (s *Influx) Write(measures snitch.Measures) error {
 
 			fieldsTwo["sample_count"] = float64(*(m.Value.SampleCount))
 
-			if !math.IsNaN(*(m.Value.SampleSum)) {
-				fieldsTwo["sample_sum"] = *(m.Value.SampleSum)
+			if v := *(m.Value.SampleSum); !math.IsNaN(v) {
+				fieldsTwo["sample_sum"] = v
 			}
 
-			if !math.IsNaN(*(m.Value.SampleMin)) {
-				fieldsTwo["sample_min"] = *(m.Value.SampleMin)
+			if v := *(m.Value.SampleMin); !math.IsNaN(v) {
+				fieldsTwo["sample_min"] = v
 			}
 
-			if !math.IsNaN(*(m.Value.SampleMax)) {
-				fieldsTwo["sample_max"] = *(m.Value.SampleMax)
+			if v := *(m.Value.SampleMax); !math.IsNaN(v) {
+				fieldsTwo["sample_max"] = v
 			}
 
-			if !math.IsNaN(*(m.Value.SampleVariance)) {
-				fieldsTwo["sample_variance"] = *(m.Value.SampleVariance)
+			if v := *(m.Value.SampleVariance); !math.IsNaN(v) {
+				fieldsTwo["sample_variance"] = v
 			}
 
 			for q, v := range m.Value.Quantiles {
