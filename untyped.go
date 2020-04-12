@@ -20,11 +20,12 @@ type Untyped interface {
 }
 
 type untypedMetric struct {
-	vector
-
 	valueBits       uint64
 	sampleCountBits uint64
-	description     *Description
+
+	vector
+
+	description *Description
 }
 
 func NewUntyped(name, help string, labels ...string) Untyped {
