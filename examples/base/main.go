@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/kihamo/snitch"
-	// _ "github.com/kihamo/snitch/collector"
+	"github.com/kihamo/snitch/collector"
 	"github.com/kihamo/snitch/storage"
 )
 
@@ -16,7 +16,13 @@ func main() {
 	histogram := snitch.NewHistogram("test-histogram", "Histogram metric", "label-3", "3")
 	timer := snitch.NewTimer("test-timer", "Timer metric", "label-4", "4", "label-5", "5")
 
-	snitch.Register(counter, gauge, histogram, timer)
+	register := snitch.NewRegistry(0)
+
+	register.Register(
+		collector.NewRuntimeCollector(),
+		collector.NewDebugCollector())
+
+	register.Register(counter, gauge, histogram, timer)
 
 	//s, err := storage.NewInflux("http://localhost:8086", "metrics", "metrics", "DE2RLgaPbq", "s")
 	// if err != nil {
@@ -25,13 +31,13 @@ func main() {
 
 	s := storage.NewExpvarWithID("metrics")
 
-	snitch.DefaultRegisterer.AddStorages(s)
+	register.AddStorages(s)
 
-	snitch.DefaultRegisterer.SendInterval(time.Second)
+	register.SendInterval(time.Second)
 	expvarHandler()
 
 	time.Sleep(time.Second * 5)
-	snitch.DefaultRegisterer.SendInterval(0)
+	register.SendInterval(0)
 	expvarHandler()
 
 	time.Sleep(time.Second * 5)

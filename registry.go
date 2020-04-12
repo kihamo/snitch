@@ -17,8 +17,6 @@ const (
 	notRunningSendInterval = time.Hour
 )
 
-var DefaultRegisterer = NewRegistry(0) // TODO: create not modified storage
-
 type Registerer interface {
 	Register(...Collector)
 	Walk(func(*Description))
@@ -234,8 +232,4 @@ func (r *Registry) send(d time.Duration) {
 			ticker = time.NewTicker(d)
 		}
 	}
-}
-
-func Register(c ...Collector) {
-	DefaultRegisterer.Register(c...)
 }
