@@ -52,6 +52,7 @@ const (
 	MetricRuntimeNumGoroutine = "go_goroutines"
 	MetricRuntimeNumThread    = "go_threads"
 	MetricRuntimeGoMaxProc    = "go_max_proc"
+	MetricRuntimeGoInfo       = "go_info"
 )
 
 var (
@@ -69,6 +70,7 @@ type runtimeCollector struct {
 	numCgoCall   snitch.Gauge
 	numGoroutine snitch.Gauge
 	goMaxProc    snitch.Gauge
+	goInfo       snitch.Gauge
 
 	memStatAlloc      snitch.Gauge
 	memStatTotalAlloc snitch.Counter
@@ -112,6 +114,7 @@ func NewRuntimeCollector() snitch.Collector {
 		numCgoCall:   snitch.NewGauge(MetricRuntimeNumCgoCall, "Number of CGO calls"),
 		numGoroutine: snitch.NewGauge(MetricRuntimeNumGoroutine, "Number of goroutines that currently exist"),
 		goMaxProc:    snitch.NewGauge(MetricRuntimeGoMaxProc, "Maximum number of CPUs that can be executing simultaneously"),
+		goInfo:       snitch.NewGauge(MetricRuntimeGoInfo, "Information about the Go environment"),
 
 		memStatAlloc:      snitch.NewGauge(MetricMemStatsAlloc, "Number of bytes allocated and still in use"),
 		memStatTotalAlloc: snitch.NewCounter(MetricMemStatsTotalAlloc, "Total number of bytes allocated, even if freed"),
@@ -189,6 +192,7 @@ func (c *runtimeCollector) Describe(ch chan<- *snitch.Description) {
 	c.numCgoCall.Describe(ch)
 	c.numGoroutine.Describe(ch)
 	c.goMaxProc.Describe(ch)
+	c.goInfo.Describe(ch)
 }
 
 func (c *runtimeCollector) Collect(ch chan<- snitch.Metric) {
@@ -281,6 +285,9 @@ func (c *runtimeCollector) Collect(ch chan<- snitch.Metric) {
 	c.numCgoCall.Collect(ch)
 	c.numGoroutine.Collect(ch)
 	c.goMaxProc.Collect(ch)
+
+	c.goInfo.With("version", runtime.Version()).Set(1)
+	c.goInfo.Collect(ch)
 
 	c.memStatAlloc.Collect(ch)
 	c.memStatTotalAlloc.Collect(ch)
