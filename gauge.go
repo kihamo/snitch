@@ -19,18 +19,18 @@ type gaugeMetric struct {
 }
 
 func NewGauge(name, help string, labels ...string) Gauge {
-	g := &gaugeMetric{
+	metric := &gaugeMetric{
 		untypedMetric: untypedMetric{
 			description: NewDescription(name, help, MetricTypeGauge, labels...),
 		},
 	}
-	g.init(g, func(l ...string) Metric {
+	metric.SetMetric(metric).SetCreator(func(l ...string) Metric {
 		return NewGauge(name, help, append(labels, l...)...)
 	})
 
-	return g
+	return metric
 }
 
 func (g *gaugeMetric) With(labels ...string) Gauge {
-	return g.vector.With(labels...).(Gauge)
+	return g.Vector.With(labels...).(Gauge)
 }

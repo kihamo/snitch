@@ -19,7 +19,7 @@ type Histogram interface {
 }
 
 type histogramMetric struct {
-	vector
+	Vector
 
 	description *Description
 	histogram   *internal.SafeHistogram
@@ -35,16 +35,16 @@ func NewHistogramWithQuantiles(name, help string, quantiles []float64, labels ..
 		quantiles = Quantiles
 	}
 
-	h := &histogramMetric{
+	metric := &histogramMetric{
 		description: NewDescription(name, help, MetricTypeHistogram, labels...),
 		histogram:   internal.NewSafeHistogram(),
 		quantiles:   quantiles,
 	}
-	h.init(h, func(l ...string) Metric {
+	metric.SetMetric(metric).SetCreator(func(l ...string) Metric {
 		return NewHistogramWithQuantiles(name, help, quantiles, append(labels, l...)...)
 	})
 
-	return h
+	return metric
 }
 
 func (h *histogramMetric) Description() *Description {
@@ -80,5 +80,5 @@ func (h *histogramMetric) Quantile(q float64) float64 {
 }
 
 func (h *histogramMetric) With(labels ...string) Histogram {
-	return h.vector.With(labels...).(Histogram)
+	return h.Vector.With(labels...).(Histogram)
 }

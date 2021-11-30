@@ -7,22 +7,27 @@ import (
 	"github.com/OneOfOne/xxhash"
 )
 
-type vector struct {
+type Vector struct {
 	metric   Metric
 	children sync.Map
 	creator  func(...string) Metric
 }
 
-func (v *vector) init(metric Metric, creator func(...string) Metric) {
+func (v *Vector) SetMetric(metric Metric) *Vector {
 	v.metric = metric
-	v.creator = creator
+	return v
 }
 
-func (v *vector) Describe(ch chan<- *Description) {
+func (v *Vector) SetCreator(creator func(...string) Metric) *Vector {
+	v.creator = creator
+	return v
+}
+
+func (v *Vector) Describe(ch chan<- *Description) {
 	ch <- v.metric.Description()
 }
 
-func (v *vector) Collect(ch chan<- Metric) {
+func (v *Vector) Collect(ch chan<- Metric) {
 	var found bool
 
 	v.children.Range(func(_, value interface{}) bool {
@@ -37,7 +42,7 @@ func (v *vector) Collect(ch chan<- Metric) {
 	}
 }
 
-func (v *vector) With(labels ...string) (metric Metric) {
+func (v *Vector) With(labels ...string) (metric Metric) {
 	l := Labels{}.With(labels...)
 	sort.Sort(l)
 

@@ -23,20 +23,20 @@ type untypedMetric struct {
 	valueBits       uint64
 	sampleCountBits uint64
 
-	vector
+	Vector
 
 	description *Description
 }
 
 func NewUntyped(name, help string, labels ...string) Untyped {
-	u := &untypedMetric{
+	metric := &untypedMetric{
 		description: NewDescription(name, help, MetricTypeUntyped, labels...),
 	}
-	u.init(u, func(l ...string) Metric {
+	metric.SetMetric(metric).SetCreator(func(l ...string) Metric {
 		return NewUntyped(name, help, append(labels, l...)...)
 	})
 
-	return u
+	return metric
 }
 
 func (u *untypedMetric) Description() *Description {
@@ -88,5 +88,5 @@ func (u *untypedMetric) SampleCount() uint64 {
 }
 
 func (u *untypedMetric) With(labels ...string) Untyped {
-	return u.vector.With(labels...).(Untyped)
+	return u.Vector.With(labels...).(Untyped)
 }

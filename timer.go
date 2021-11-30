@@ -33,7 +33,7 @@ func NewTimerWithQuantiles(name, help string, quantiles []float64, labels ...str
 		quantiles = Quantiles
 	}
 
-	t := &timerMetric{
+	metric := &timerMetric{
 		histogramMetric: histogramMetric{
 			description: NewDescription(name, help, MetricTypeTimer, labels...),
 			histogram:   internal.NewSafeHistogram(),
@@ -41,11 +41,11 @@ func NewTimerWithQuantiles(name, help string, quantiles []float64, labels ...str
 		},
 		begin: time.Now(),
 	}
-	t.init(t, func(l ...string) Metric {
+	metric.SetMetric(metric).SetCreator(func(l ...string) Metric {
 		return NewTimerWithQuantiles(name, help, quantiles, append(labels, l...)...)
 	})
 
-	return t
+	return metric
 }
 
 func (t *timerMetric) Update(d time.Duration) {
@@ -66,5 +66,5 @@ func (t *timerMetric) Time() {
 }
 
 func (t *timerMetric) With(labels ...string) Timer {
-	return t.vector.With(labels...).(Timer)
+	return t.Vector.With(labels...).(Timer)
 }

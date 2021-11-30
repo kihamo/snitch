@@ -20,16 +20,16 @@ type counterMetric struct {
 }
 
 func NewCounter(name, help string, labels ...string) Counter {
-	c := &counterMetric{
+	metric := &counterMetric{
 		untypedMetric: untypedMetric{
 			description: NewDescription(name, help, MetricTypeCounter, labels...),
 		},
 	}
-	c.init(c, func(l ...string) Metric {
+	metric.SetMetric(metric).SetCreator(func(l ...string) Metric {
 		return NewCounter(name, help, append(labels, l...)...)
 	})
 
-	return c
+	return metric
 }
 
 func (c *counterMetric) Add(value float64) {
@@ -45,5 +45,5 @@ func (c *counterMetric) Count() float64 {
 }
 
 func (c *counterMetric) With(labels ...string) Counter {
-	return c.vector.With(labels...).(Counter)
+	return c.Vector.With(labels...).(Counter)
 }
